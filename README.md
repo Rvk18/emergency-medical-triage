@@ -42,10 +42,31 @@ See the design document for detailed architecture, data models, and correctness 
 ```
 AI_Hackathon_Triage/
 ├── README.md
-└── emergency-medical-triage/
-    ├── requirements.md   # Full requirements and acceptance criteria
-    └── design.md         # Architecture, interfaces, data models, testing
+├── emergency-medical-triage/
+│   ├── requirements.md   # Full requirements and acceptance criteria
+│   └── design.md         # Architecture, interfaces, data models, testing
+└── infrastructure/       # Terraform (S3, Aurora, API Gateway, Lambda, Bedrock)
+    ├── README.md
+    ├── verify-resources.sh
+    └── *.tf
 ```
+
+## Quick Start (for collaborators)
+
+1. **Clone and setup**
+   ```bash
+   git clone https://github.com/Rvk18/emergency-medical-triage.git
+   cd emergency-medical-triage
+   ```
+
+2. **Provision AWS** (see [infrastructure/README.md](infrastructure/README.md))
+   ```bash
+   cd infrastructure
+   cp terraform.tfvars.example terraform.tfvars   # Edit db_username, db_password
+   cp secrets.env.example secrets.env            # Add AWS credentials
+   terraform init && terraform apply
+   ./verify-resources.sh
+   ```
 
 ## Documentation
 

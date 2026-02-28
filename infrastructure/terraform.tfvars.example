@@ -1,0 +1,8 @@
+# Copy to terraform.tfvars and fill in your values
+
+project_name = "emergency-medical-triage"
+aws_region   = "us-east-1"
+environment  = "dev"
+
+db_username = "triagemaster"
+db_password = "Wado_ichimonji_ftw"
