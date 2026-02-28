@@ -44,9 +44,6 @@ AI_Hackathon_Triage/
 ├── README.md
 ├── pyproject.toml
 ├── requirements.txt
-├── docs/
-│   ├── requirements.md   # Full requirements and acceptance criteria
-│   └── design.md         # Architecture, interfaces, data models, testing
 ├── src/
 │   └── triage/           # Main Python package
 │       ├── api/          # Lambda handlers, API layer
@@ -80,8 +77,8 @@ AI_Hackathon_Triage/
 
 | Document | Description |
 |----------|-------------|
-| [requirements.md](docs/requirements.md) | User stories, acceptance criteria, and glossary |
-| [design.md](docs/design.md) | Architecture, components, data models, error handling, testing strategy |
+| [requirements.md](../docs/backend/requirements.md) | User stories, acceptance criteria, and glossary |
+| [design.md](../docs/backend/design.md) | Architecture, components, data models, error handling, testing strategy |
 
 ## Tech Stack
 
