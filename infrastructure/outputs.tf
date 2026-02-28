@@ -43,6 +43,11 @@ output "rds_config_secret_name" {
   value       = aws_secretsmanager_secret.rds_config.name
 }
 
+output "bastion_public_ip" {
+  description = "Bastion public IP for SSH tunnel (when enable_bastion=true)"
+  value       = var.enable_bastion ? aws_instance.bastion[0].public_ip : null
+}
+
 output "api_gateway_health_url" {
   description = "API Gateway health check URL"
   value       = "${aws_api_gateway_stage.main.invoke_url}/health"

@@ -27,3 +27,22 @@ variable "db_password" {
   type        = string
   sensitive   = true
 }
+
+# Bastion (optional - for SSH tunnel to Aurora)
+variable "enable_bastion" {
+  description = "Create bastion host for SSH tunnel to Aurora"
+  type        = bool
+  default     = false
+}
+
+variable "bastion_ssh_public_key" {
+  description = "SSH public key for bastion (contents of ~/.ssh/id_rsa.pub)"
+  type        = string
+  default     = ""
+}
+
+variable "bastion_allowed_cidr" {
+  description = "CIDR allowed to SSH to bastion (e.g. YOUR_IP/32)"
+  type        = string
+  default     = ""
+}

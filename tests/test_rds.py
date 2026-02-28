@@ -40,7 +40,7 @@ def _get_iam_token(host: str, port: int, username: str, region: str) -> str:
     client = boto3.client("rds", region_name=region)
     return client.generate_db_auth_token(
         DBHostname=host,
-        DBPort=port,
+        Port=port,
         DBUsername=username,
         Region=region,
     )
@@ -49,13 +49,14 @@ def _get_iam_token(host: str, port: int, username: str, region: str) -> str:
 def test_rds_iam_connect():
     """Connect to Aurora via IAM auth using config from Secrets Manager."""
     config = _get_rds_config()
-    host = config["host"]
-    port = config["port"]
+    # Use 127.0.0.1 when SSH tunnel is active: ssh -L LOCAL_PORT:AURORA_ENDPOINT:5432 ec2-user@BASTION_IP
+    host = os.environ.get("RDS_HOST_OVERRIDE", config["host"])
+    port = int(os.environ.get("RDS_PORT_OVERRIDE", config["port"]))
     database = config["database"]
     username = config["username"]
     region = config["region"]
-
-    token = _get_iam_token(host, port, username, region)
+    # Token must be generated for real Aurora host, not 127.0.0.1
+    token = _get_iam_token(config["host"], port, username, region)
 
     try:
         import psycopg2
@@ -66,7 +67,7 @@ def test_rds_iam_connect():
             dbname=database,
             user=username,
             password=token,
-            connect_timeout=5,
+            connect_timeout=15,
         )
         conn.autocommit = True
         cur = conn.cursor()
@@ -81,8 +82,8 @@ def test_rds_iam_connect():
         err = str(e).lower()
         if "could not connect" in err or "timeout" in err or "connection refused" in err:
             pytest.skip(
-                "Aurora unreachable from this network (use VPC/bastion). "
-                "IAM auth and Secrets Manager access are validated."
+                f"Aurora unreachable (host={host}). "
+                "Ensure SSH tunnel is running and RDS_HOST_OVERRIDE=127.0.0.1. Error: " + str(e)
             )
         if "password authentication failed" in err or "rds_iam" in err:
             pytest.fail(
