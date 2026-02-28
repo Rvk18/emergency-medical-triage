@@ -17,14 +17,18 @@ secrets.env
 .DS_Store
 .idea/
 .vscode/
+.cursor/
 *.swp
 *.swo
 
-# Dependencies
+# Dependencies and Python
 node_modules/
 __pycache__/
 *.pyc
+.pytest_cache/
+.mypy_cache/
 .venv/
 venv/
+scripts/.venv/
 dist/
 build/

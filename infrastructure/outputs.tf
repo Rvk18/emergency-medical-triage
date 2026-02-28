@@ -33,6 +33,16 @@ output "api_gateway_url" {
   value       = "${aws_api_gateway_stage.main.invoke_url}/"
 }
 
+output "bedrock_config_secret_name" {
+  description = "Secrets Manager secret name for Bedrock config"
+  value       = aws_secretsmanager_secret.bedrock_config.name
+}
+
+output "rds_config_secret_name" {
+  description = "Secrets Manager secret name for RDS connection config (IAM auth)"
+  value       = aws_secretsmanager_secret.rds_config.name
+}
+
 output "api_gateway_health_url" {
   description = "API Gateway health check URL"
   value       = "${aws_api_gateway_stage.main.invoke_url}/health"

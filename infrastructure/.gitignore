@@ -1,6 +1,7 @@
 .terraform/
 *.tfstate
 *.tfstate.*
+.terraform.tfstate.lock.info
 terraform.tfvars
 tfplan
 *.tfvars

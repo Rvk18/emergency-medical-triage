@@ -42,13 +42,19 @@ See the design document for detailed architecture, data models, and correctness 
 ```
 AI_Hackathon_Triage/
 ├── README.md
-├── emergency-medical-triage/
+├── pyproject.toml
+├── requirements.txt
+├── docs/
 │   ├── requirements.md   # Full requirements and acceptance criteria
 │   └── design.md         # Architecture, interfaces, data models, testing
-└── infrastructure/       # Terraform (S3, Aurora, API Gateway, Lambda, Bedrock)
-    ├── README.md
-    ├── verify-resources.sh
-    └── *.tf
+├── src/
+│   └── triage/           # Main Python package
+│       ├── api/          # Lambda handlers, API layer
+│       ├── core/         # Triage logic, Bedrock integration
+│       └── models/       # Data models and schemas
+├── infrastructure/       # Terraform (S3, Aurora, API Gateway, Lambda, Bedrock)
+├── scripts/              # CLI and one-off scripts
+└── tests/
 ```
 
 ## Quick Start (for collaborators)
@@ -57,6 +63,8 @@ AI_Hackathon_Triage/
    ```bash
    git clone https://github.com/Rvk18/emergency-medical-triage.git
    cd emergency-medical-triage
+   python -m venv .venv && source .venv/bin/activate  # or .venv\Scripts\activate on Windows
+   pip install -r requirements.txt
    ```
 
 2. **Provision AWS** (see [infrastructure/README.md](infrastructure/README.md))
@@ -72,8 +80,8 @@ AI_Hackathon_Triage/
 
 | Document | Description |
 |----------|-------------|
-| [requirements.md](emergency-medical-triage/requirements.md) | User stories, acceptance criteria, and glossary |
-| [design.md](emergency-medical-triage/design.md) | Architecture, components, data models, error handling, testing strategy |
+| [requirements.md](docs/requirements.md) | User stories, acceptance criteria, and glossary |
+| [design.md](docs/design.md) | Architecture, components, data models, error handling, testing strategy |
 
 ## Tech Stack
 

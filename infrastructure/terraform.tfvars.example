@@ -4,5 +4,7 @@ project_name = "emergency-medical-triage"
 aws_region   = "us-east-1"
 environment  = "dev"
 
+# WARNING: Do not change db_username after first apply - it forces Aurora replacement
+# RDS password: only printable ASCII; no '/', '@', '"', or space
 db_username = "triagemaster"
 db_password = "Wado_ichimonji_ftw"

@@ -7,7 +7,7 @@ Terraform configuration for Emergency Medical Triage AWS resources.
 | Resource | Description |
 |----------|-------------|
 | **S3** | Bucket with versioning and encryption for backups, audit logs, media |
-| **RDS Aurora** | PostgreSQL 15.4, Serverless v2, in private subnets |
+| **RDS Aurora** | PostgreSQL 15.10, Serverless v2, in private subnets |
 | **Bedrock** | IAM policy for invoking foundation models (enable model access in Console) |
 | **API Gateway** | REST API with `/triage` and `/health` endpoints |
 
@@ -33,7 +33,7 @@ Terraform configuration for Emergency Medical Triage AWS resources.
 
 3. **Bedrock**: Enable model access in AWS Console → Bedrock → Model access (left menu) → Manage → Enable Claude or other models.
 
-4. **Aurora**: The cluster is in private subnets. To connect, use a bastion, VPN, or run your app (e.g. Lambda) in the same VPC.
+4. **Aurora**: The cluster is in private subnets. To connect, use a bastion, VPN, or run your app (e.g. Lambda) in the same VPC. IAM database auth is enabled. One-time: connect with password and run `GRANT rds_iam TO <db_username>;` to allow IAM auth.
 
 ## Outputs
 
