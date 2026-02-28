@@ -46,3 +46,22 @@ variable "bastion_allowed_cidr" {
   type        = string
   default     = ""
 }
+
+# Bedrock Agent (leave empty to use Converse API fallback)
+variable "bedrock_agent_id" {
+  description = "Bedrock Agent ID for triage (empty = use Converse API)"
+  type        = string
+  default     = ""
+}
+
+variable "bedrock_agent_alias_id" {
+  description = "Bedrock Agent Alias ID"
+  type        = string
+  default     = "TSTALIASID"
+}
+
+variable "bedrock_model_id" {
+  description = "Bedrock model for Converse fallback (when agent not configured)"
+  type        = string
+  default     = "us.anthropic.claude-3-5-sonnet-v2:0"
+}

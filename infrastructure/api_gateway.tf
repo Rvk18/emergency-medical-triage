@@ -43,6 +43,25 @@ resource "aws_api_gateway_integration" "health_mock" {
   uri                     = aws_lambda_function.health.invoke_arn
 }
 
+# POST /triage
+resource "aws_api_gateway_method" "triage_post" {
+  rest_api_id   = aws_api_gateway_rest_api.main.id
+  resource_id   = aws_api_gateway_resource.triage.id
+  http_method   = "POST"
+  authorization = "NONE"
+
+  request_parameters = {}
+}
+
+resource "aws_api_gateway_integration" "triage_post" {
+  rest_api_id             = aws_api_gateway_rest_api.main.id
+  resource_id             = aws_api_gateway_resource.triage.id
+  http_method             = aws_api_gateway_method.triage_post.http_method
+  type                    = "AWS_PROXY"
+  integration_http_method = "POST"
+  uri                     = aws_lambda_function.triage.invoke_arn
+}
+
 # AWS_PROXY passes response through from Lambda; no method/integration response needed
 
 resource "aws_api_gateway_deployment" "main" {
@@ -54,6 +73,8 @@ resource "aws_api_gateway_deployment" "main" {
       aws_api_gateway_resource.health.id,
       aws_api_gateway_method.health_get.id,
       aws_api_gateway_integration.health_mock.id,
+      aws_api_gateway_method.triage_post.id,
+      aws_api_gateway_integration.triage_post.id,
     ]))
   }
 

@@ -10,12 +10,21 @@ resource "aws_iam_policy" "bedrock_invoke" {
     Version = "2012-10-17"
     Statement = [
       {
-        Effect = "Allow"
-        Action = [
-          "bedrock:InvokeModel",
-          "bedrock:InvokeModelWithResponseStream"
+        Effect   = "Allow"
+        Action   = ["bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream"]
+        Resource = [
+          "arn:aws:bedrock:us-east-1::foundation-model/*",
+          "arn:aws:bedrock:us-east-2::foundation-model/*",
+          "arn:aws:bedrock:us-west-2::foundation-model/*",
+          "arn:aws:bedrock:us-east-1:*:inference-profile/*",
+          "arn:aws:bedrock:us-east-2:*:inference-profile/*",
+          "arn:aws:bedrock:us-west-2:*:inference-profile/*"
         ]
-        Resource = "arn:aws:bedrock:${var.aws_region}::foundation-model/*"
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["bedrock:InvokeAgent"]
+        Resource = "*"
       }
     ]
   })
