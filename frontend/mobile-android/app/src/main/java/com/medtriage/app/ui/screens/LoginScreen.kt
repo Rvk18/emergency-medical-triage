@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Fingerprint
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -44,6 +44,7 @@ fun LoginScreen(
         Text(
             text = "MedTriage AI",
             style = MaterialTheme.typography.headlineMedium,
+            color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.padding(bottom = Spacing.space32)
         )
         OutlinedTextField(
@@ -66,7 +67,7 @@ fun LoginScreen(
         )
         Spacer(modifier = Modifier.height(Spacing.space8))
         IconButton(onClick = { /* Biometric placeholder */ }) {
-            Icon(Icons.Default.Fingerprint, contentDescription = "Sign in with biometrics")
+            Icon(Icons.Default.Lock, contentDescription = "Sign in with biometrics")
         }
         Text(
             text = "Biometric sign-in (placeholder)",

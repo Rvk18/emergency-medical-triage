@@ -4,10 +4,12 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -22,17 +24,17 @@ class UserPreferences @Inject constructor(
     private val selectedLanguageKey = stringPreferencesKey("selected_language")
     private val userRoleKey = stringPreferencesKey("user_role")
 
-    val authToken: Flow<String?> = context.dataStore.data.map { prefs ->
-        prefs[authTokenKey]
-    }
+    val authToken: Flow<String?> = context.dataStore.data
+        .catch { _ -> emit(emptyPreferences()) }
+        .map { prefs -> prefs[authTokenKey] }
 
-    val selectedLanguage: Flow<String?> = context.dataStore.data.map { prefs ->
-        prefs[selectedLanguageKey]
-    }
+    val selectedLanguage: Flow<String?> = context.dataStore.data
+        .catch { _ -> emit(emptyPreferences()) }
+        .map { prefs -> prefs[selectedLanguageKey] }
 
-    val userRole: Flow<String?> = context.dataStore.data.map { prefs ->
-        prefs[userRoleKey]
-    }
+    val userRole: Flow<String?> = context.dataStore.data
+        .catch { _ -> emit(emptyPreferences()) }
+        .map { prefs -> prefs[userRoleKey] }
 
     suspend fun setAuthToken(token: String?) {
         context.dataStore.edit { prefs ->

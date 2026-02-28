@@ -27,6 +27,11 @@
 - **No secrets in app:** Auth via token (e.g. JWT from `/auth/login`); API base URL from build config / env, never hardcoded API keys or DB credentials.
 - **Offline:** Cached triage for common scenarios + cached hospital data (e.g. 50 km); sync when back online (`/sync/upload`, `/sync/download`).
 
+**Dashboards / roles (mobile app):**
+- **1. User (Healthcare Worker):** Main flow — Triage tab, Hospitals tab, Dashboard tab, More. Role badge in top bar (e.g. “Healthcare Worker”).
+- **2. RMP Dashboard:** The “Dashboard” tab is the RMP (Rural Medical Practitioner) view: profile, competency, learning modules, “Start Triage” / guidance.
+- **3. Admin / Hospital Staff:** Planned for later (or web); not separate screens in the current mobile build.
+
 ---
 
 ## 2. API Endpoints the Mobile App Will Use

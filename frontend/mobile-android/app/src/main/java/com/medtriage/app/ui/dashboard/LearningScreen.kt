@@ -44,7 +44,7 @@ fun LearningScreen(
                 Column(Modifier.padding(Spacing.space16)) {
                     Text(m.title, style = MaterialTheme.typography.titleMedium)
                     LinearProgressIndicator(
-                        progress = { m.progressPercent / 100f },
+                        progress = m.progressPercent / 100f,
                         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
                     )
                     Text(

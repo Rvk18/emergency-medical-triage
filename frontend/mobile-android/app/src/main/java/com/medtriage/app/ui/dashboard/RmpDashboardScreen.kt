@@ -31,11 +31,20 @@ fun RmpDashboardScreen(
             .padding(Spacing.space16)
             .verticalScroll(scroll)
     ) {
-        Text("RMP Dashboard", style = MaterialTheme.typography.headlineMedium)
+        Text(
+            "RMP Dashboard",
+            style = MaterialTheme.typography.headlineMedium,
+            color = MaterialTheme.colorScheme.primary
+        )
         Spacer(Modifier.height(Spacing.space16))
-        if (loading) Text("Loading…")
+        if (loading) Text("Loading…", style = MaterialTheme.typography.bodyMedium)
         profile?.let { p ->
-            Card(modifier = Modifier.fillMaxWidth(), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                shape = MaterialTheme.shapes.medium
+            ) {
                 Column(Modifier.padding(Spacing.space16)) {
                     Text("Competency: ${p.competencyScore}%", style = MaterialTheme.typography.titleMedium)
                     Text("Level: ${p.levelBadge}", style = MaterialTheme.typography.bodyMedium)
@@ -48,7 +57,7 @@ fun RmpDashboardScreen(
                 Text("• ${c.summary} (${c.severity})", style = MaterialTheme.typography.bodyMedium)
             }
             Spacer(Modifier.height(Spacing.space24))
-            androidx.compose.material3.Button(onClick = onStartTriage, modifier = Modifier.fillMaxWidth()) {
+            androidx.compose.material3.FilledTonalButton(onClick = onStartTriage, modifier = Modifier.fillMaxWidth()) {
                 Text("Start Triage")
             }
             Spacer(Modifier.height(Spacing.space8))

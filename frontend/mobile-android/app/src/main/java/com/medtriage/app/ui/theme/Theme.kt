@@ -14,6 +14,10 @@ import androidx.core.view.WindowCompat
 private val LightColorScheme = lightColorScheme(
     primary = MedTriagePrimary,
     onPrimary = androidx.compose.ui.graphics.Color.White,
+    primaryContainer = LightPrimaryContainer,
+    onPrimaryContainer = LightOnPrimaryContainer,
+    secondary = MedTriageSecondary,
+    tertiary = MedTriageTertiary,
     surface = LightSurface,
     onSurface = LightOnSurface,
     surfaceVariant = LightSurfaceVariant,
@@ -21,8 +25,12 @@ private val LightColorScheme = lightColorScheme(
 )
 
 private val DarkColorScheme = darkColorScheme(
-    primary = MedTriagePrimary,
+    primary = MedTriagePrimaryVariant,
     onPrimary = androidx.compose.ui.graphics.Color.White,
+    primaryContainer = DarkPrimaryContainer,
+    onPrimaryContainer = DarkOnPrimaryContainer,
+    secondary = MedTriageSecondary,
+    tertiary = MedTriageTertiary,
     surface = DarkSurface,
     onSurface = DarkOnSurface,
     surfaceVariant = DarkSurfaceVariant,
@@ -36,7 +44,7 @@ fun MedTriageTheme(
 ) {
     val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
     val view = LocalView.current
-    if (!view.isInEditMode) {
+    if (!view.isInEditMode && view.context is Activity) {
         SideEffect {
             val window = (view.context as Activity).window
             window.statusBarColor = colorScheme.surface.toArgb()
@@ -46,6 +54,7 @@ fun MedTriageTheme(
     MaterialTheme(
         colorScheme = colorScheme,
         typography = MedTriageTypography,
+        shapes = MedTriageShapes,
         content = content
     )
 }

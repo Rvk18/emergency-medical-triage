@@ -5,7 +5,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.LocalHospital
+import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -53,7 +53,7 @@ fun AppShell(
 
     val bottomNavItems = listOf(
         BottomNavItem(NavRoutes.Triage, "Triage", Icons.Default.Home),
-        BottomNavItem(NavRoutes.Hospitals, "Hospitals", Icons.Default.LocalHospital),
+        BottomNavItem(NavRoutes.Hospitals, "Hospitals", Icons.Default.Place),
         BottomNavItem(NavRoutes.Dashboard, "Dashboard", Icons.Default.Person),
         BottomNavItem(NavRoutes.More, "More", Icons.Default.Menu)
     )
@@ -71,8 +71,9 @@ fun AppShell(
                         )
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface,
-                        titleContentColor = androidx.compose.material3.MaterialTheme.colorScheme.onSurface
+                        containerColor = androidx.compose.material3.MaterialTheme.colorScheme.primaryContainer,
+                        titleContentColor = androidx.compose.material3.MaterialTheme.colorScheme.onPrimaryContainer,
+                        actionIconContentColor = androidx.compose.material3.MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 )
                 OfflineBanner(visible = isOffline, lastSyncTime = lastSyncTime)
