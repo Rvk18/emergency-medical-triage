@@ -38,11 +38,13 @@
 
 Same contract as in `frontend_workflow.md` §9. Backend team owns implementation; mobile only consumes.
 
+**Real API base (current):** `https://vrxlwtzfff.execute-api.us-east-1.amazonaws.com/dev` — triage is **POST `/triage`** (see `docs/frontend/triage-api-contract.md`).
+
 | Endpoint | Method | Use in app |
 |----------|--------|------------|
 | `/auth/login` | POST | Login → store JWT |
 | `/auth/validate` | GET | Validate token & role |
-| `/triage/assess` | POST | Submit symptoms → severity |
+| `/triage` | POST | Submit symptoms + vitals → severity (real endpoint; plan also references `/triage/assess`) |
 | `/triage/report/{id}` | GET | Triage report screen |
 | `/triage/override/{id}` | PUT | Override AI recommendation |
 | `/hospitals/match` | POST | Top 3 hospital matches |
