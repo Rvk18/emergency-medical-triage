@@ -14,6 +14,7 @@ class TriageRequest(BaseModel):
     vitals: dict[str, float] = Field(default_factory=dict, description="Vital signs")
     age_years: int | None = Field(default=None, ge=0, le=150)
     sex: str | None = None
+    submitted_by: str | None = Field(default=None, description="RMP ID or user identifier")
 
 
 class TriageResult(BaseModel):

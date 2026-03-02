@@ -25,6 +25,12 @@ resource "aws_api_gateway_resource" "health" {
   path_part   = "health"
 }
 
+resource "aws_api_gateway_resource" "hospitals" {
+  rest_api_id = aws_api_gateway_rest_api.main.id
+  parent_id   = aws_api_gateway_rest_api.main.root_resource_id
+  path_part   = "hospitals"
+}
+
 resource "aws_api_gateway_method" "health_get" {
   rest_api_id   = aws_api_gateway_rest_api.main.id
   resource_id   = aws_api_gateway_resource.health.id
@@ -41,6 +47,23 @@ resource "aws_api_gateway_integration" "health_mock" {
   type                    = "AWS_PROXY"
   integration_http_method = "POST"
   uri                     = aws_lambda_function.health.invoke_arn
+}
+
+# POST /hospitals
+resource "aws_api_gateway_method" "hospitals_post" {
+  rest_api_id   = aws_api_gateway_rest_api.main.id
+  resource_id   = aws_api_gateway_resource.hospitals.id
+  http_method   = "POST"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "hospitals_post" {
+  rest_api_id             = aws_api_gateway_rest_api.main.id
+  resource_id             = aws_api_gateway_resource.hospitals.id
+  http_method             = aws_api_gateway_method.hospitals_post.http_method
+  type                    = "AWS_PROXY"
+  integration_http_method = "POST"
+  uri                     = aws_lambda_function.hospital_matcher.invoke_arn
 }
 
 # POST /triage
@@ -71,10 +94,13 @@ resource "aws_api_gateway_deployment" "main" {
     redeployment = sha1(jsonencode([
       aws_api_gateway_resource.triage.id,
       aws_api_gateway_resource.health.id,
+      aws_api_gateway_resource.hospitals.id,
       aws_api_gateway_method.health_get.id,
       aws_api_gateway_integration.health_mock.id,
       aws_api_gateway_method.triage_post.id,
       aws_api_gateway_integration.triage_post.id,
+      aws_api_gateway_method.hospitals_post.id,
+      aws_api_gateway_integration.hospitals_post.id,
     ]))
   }
 

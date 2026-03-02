@@ -3,6 +3,8 @@
 **Scope:** AI layer (Bedrock, severity classification, confidence scoring, multi-model consensus) and backend Lambda services.  
 **Out of scope (other team):** Frontend, Auth, MCP servers, External integrations.
 
+> **See also:** [implementation-history.md](./implementation-history.md) – Full discussion summary, decisions, issues & fixes.
+
 ---
 
 ## Captured Decisions
@@ -20,42 +22,46 @@
 | **force_high_priority** | Implement as **action group** |
 | **Multi-model** | Phase 3; multiple agents |
 | **Knowledge Base** | WHO guidelines via MCP or Aurora; RAG for validation. No prod data for hackathon—use MCP or synthetic data |
+| **Triage** | Converse API with tool use (faster iteration); Bedrock Agent optional |
+| **Hospital Matcher & Routing** | Use **Bedrock Agents** (per discussion) |
 
 ---
 
-## Phase 1: Triage Lambda + Bedrock Agents
+## Phase 1: Triage Lambda + Bedrock Converse API ✅ DONE
 
-**Goal:** End-to-end triage flow using **Bedrock Agents** — reasoning agent with action groups (Lambda + KB). Receive symptoms/vitals, return severity + confidence + recommended actions.
+**Goal:** End-to-end triage flow. Receive symptoms/vitals, return severity + confidence + recommended actions.
 
-### Architecture
-- **Triage Agent**: Bedrock Agent (Claude Sonnet) with action groups.
-- **Action groups**: Lambda (business logic) + Knowledge Base (RAG for WHO guidelines).
-- **force_high_priority**: Dedicated action group invoked when confidence < 85%.
+**Implemented:** Converse API with tool use (Bedrock Agent path exists but optional; `BEDROCK_AGENT_ID` empty).
+
+### Architecture (Current)
+- **Triage**: Converse API + `submit_triage_result` tool; Pydantic validates output
+- **force_high_priority**: Enforced in agent instructions and validation
+- No Bedrock Agent, no KB for Phase 1 (simplified delivery)
 
 ### Deliverables
-- [ ] **Models** (`src/triage/models/`): TriageRequest, TriageResult, SeverityLevel (critical/high/medium/low) — strict Pydantic schema
-- [ ] **Agent setup**: Bedrock Agent, action groups (Lambda + KB), OpenAPI/function schema
-- [ ] **Core** (`src/triage/core/`): Agent orchestration, severity extraction, confidence scoring
-- [ ] **Safety:** Reasoning agent enforces confidence < 85% → force_high_priority via action group
-- [ ] **API** (`src/triage/api/`): Lambda handler for POST /triage
-- [ ] **Infra:** Triage Lambda, API Gateway POST /triage, Bedrock Agents, KB, Secrets Manager
-
-### Acceptance
-- POST /triage with symptoms returns structured triage result
-- Confidence < 85% triggers high-priority recommendation (via reasoning agent)
-- Response within 2 minutes
+- [x] **Models** (`src/triage/models/`): TriageRequest, TriageResult, SeverityLevel
+- [x] **Core** (`src/triage/core/`): agent.py, instructions.py, tools.py
+- [x] **API** (`src/triage/api/`): Lambda handler for POST /triage
+- [x] **Infra:** Triage Lambda, API Gateway POST /triage, Bedrock IAM
+- [ ] **Agent setup** (optional): Bedrock Agent, action groups, KB – deferred
 
 ---
 
-## Phase 2: Aurora Schema + Persist Triage Results
+## Phase 2: Aurora Schema + Persist Triage Results ✅ DONE
 
 **Goal:** Store triage assessments in Aurora for audit and downstream use.
 
+### Schema decisions (from discussion)
+- **deleted_at**: Yes (soft delete)
+- **updated_at**: No (append-only)
+- **submitted_by / rmp_id**: Yes
+- **hospital_match_id**: Yes (Phase 4 linkage)
+
 ### Deliverables
-- [ ] Aurora schema: `triage_assessments` table (id, symptoms, vitals, severity, confidence, recommendations, created_at, etc.)
-- [ ] `src/triage/core/db.py`: IAM auth connection, insert triage record
-- [ ] Triage Lambda: after assessment, persist to Aurora
-- [ ] Infra: Lambda in VPC, Aurora SG allows Lambda
+- [x] Aurora schema: `triage_assessments` table (see `infrastructure/migrations/001_*`)
+- [x] `src/triage/core/db.py`: IAM auth, insert
+- [x] Triage Lambda: persist after assessment
+- [x] Infra: Lambda in VPC, NAT, Aurora SG, RDS Data API for migrations
 
 ---
 
@@ -75,12 +81,14 @@
 
 ## Phase 4: Hospital Matcher + Routing Services
 
-**Goal:** Hospital Matcher and Routing Lambdas (stubs; MCP integration later by other team).
+**Goal:** Hospital Matcher and Routing using **Bedrock Agents** (per discussion). Stubs until MCP integration.
 
 ### Deliverables
-- [ ] Hospital Matcher Lambda: accepts triage result, returns top hospitals (mock/stub until MCP)
-- [ ] Routing Lambda: accepts origin + hospital, returns route (mock until Geographic MCP)
-- [ ] API Gateway: /hospitals, /route endpoints
+- [x] **Hospital Matcher Lambda**: Converse API + optional Bedrock Agent; POST /hospitals
+- [x] **API Gateway**: /hospitals
+- [x] **hospital_matches** schema; link to `triage_assessments.hospital_match_id`
+- [ ] **Hospital Matcher Bedrock Agent**: Create in Console; set `bedrock_hospital_matcher_agent_id`
+- [ ] **Routing Agent**: Bedrock Agent; POST /route
 
 ---
 
@@ -97,11 +105,11 @@
 
 ## Execution Order
 
-| Phase | Focus                    | Dependency |
-|-------|--------------------------|------------|
-| 1     | Triage + Bedrock Agents  | None       |
-| 2     | Aurora persist           | Phase 1    |
-| 3     | Multi-model + guardrails | Phase 1    |
-| 4     | Hospital + Routing       | Phase 1    |
+| Phase | Focus                    | Status   | Dependency |
+|-------|--------------------------|----------|------------|
+| 1     | Triage + Converse API    | ✅ Done  | None       |
+| 2     | Aurora persist           | ✅ Done  | Phase 1    |
+| 3     | Multi-model + guardrails | Next     | Phase 1    |
+| 4     | Hospital + Routing (Bedrock Agents) | Next | Phase 1    |
 
 Phase 2 and 3 can run in parallel after Phase 1.

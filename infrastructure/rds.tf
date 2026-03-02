@@ -11,6 +11,7 @@ resource "aws_rds_cluster" "aurora" {
   skip_final_snapshot                 = var.environment == "dev"
   storage_encrypted                   = true
   iam_database_authentication_enabled = true
+  enable_http_endpoint                = true
 
   serverlessv2_scaling_configuration {
     min_capacity = 0.5

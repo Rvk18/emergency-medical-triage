@@ -8,12 +8,13 @@ rm -rf "$OUT_DIR"
 mkdir -p "$OUT_DIR"
 
 # Install dependencies for Lambda (Linux x86_64) - avoid Mac-built binaries
-pip install --target "$OUT_DIR" \
+python3 -m pip install --target "$OUT_DIR" \
   --platform manylinux2014_x86_64 \
   --implementation cp \
   --python-version 3.12 \
   --only-binary=:all: \
   pydantic \
+  psycopg2-binary \
   --quiet
 
 # Copy triage package

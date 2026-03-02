@@ -65,3 +65,16 @@ variable "bedrock_model_id" {
   type        = string
   default     = "us.anthropic.claude-3-5-sonnet-v2:0"
 }
+
+# Hospital Matcher Bedrock Agent (leave empty to use Converse API)
+variable "bedrock_hospital_matcher_agent_id" {
+  description = "Bedrock Agent ID for Hospital Matcher (empty = use Converse API)"
+  type        = string
+  default     = ""
+}
+
+variable "bedrock_hospital_matcher_agent_alias_id" {
+  description = "Bedrock Agent Alias ID for Hospital Matcher"
+  type        = string
+  default     = "TSTALIASID"
+}

@@ -1,13 +1,6 @@
 # Bastion host for SSH tunnel to Aurora (dev only)
 # Set enable_bastion=true, bastion_ssh_public_key, bastion_allowed_cidr in terraform.tfvars
-
-resource "aws_internet_gateway" "main" {
-  count  = var.enable_bastion ? 1 : 0
-  vpc_id = aws_vpc.main.id
-  tags = {
-    Name = "${local.name_prefix}-igw"
-  }
-}
+# Uses IGW from nat.tf - no duplicate IGW
 
 resource "aws_subnet" "public_a" {
   count                   = var.enable_bastion ? 1 : 0
@@ -25,7 +18,7 @@ resource "aws_route_table" "public" {
   vpc_id = aws_vpc.main.id
   route {
     cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.main[0].id
+    gateway_id = aws_internet_gateway.nat.id
   }
   tags = { Name = "${local.name_prefix}-public-rt" }
 }

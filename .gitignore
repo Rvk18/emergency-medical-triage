@@ -6,6 +6,8 @@
 terraform.tfvars
 !terraform.tfvars.example
 lambda_health.zip
+hospital_matcher_lambda.zip
+hospital_matcher_lambda_src/
 
 # Secrets and credentials
 secrets.env
