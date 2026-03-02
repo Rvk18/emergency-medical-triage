@@ -31,6 +31,7 @@ resource "aws_iam_policy" "bedrock_invoke" {
 }
 
 # AgentCore: invoke AgentCore Runtime agents (when use_agentcore=true)
+# Resource must include wildcard to allow /runtime-endpoint/DEFAULT subpath
 resource "aws_iam_policy" "agentcore_invoke" {
   count       = var.use_agentcore && var.agent_runtime_arn != "" ? 1 : 0
   name        = "${local.name_prefix}-agentcore-invoke"
@@ -42,7 +43,7 @@ resource "aws_iam_policy" "agentcore_invoke" {
       {
         Effect   = "Allow"
         Action   = ["bedrock-agentcore:InvokeAgentRuntime"]
-        Resource = [var.agent_runtime_arn]
+        Resource = ["${var.agent_runtime_arn}", "${var.agent_runtime_arn}/*"]
       }
     ]
   })
