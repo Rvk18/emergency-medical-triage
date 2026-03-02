@@ -122,8 +122,17 @@
 
 ---
 
+## Cleanup: Bedrock Agent Removed (AgentCore Migration)
+
+- **Removed:** Classic Bedrock Agent Terraform (`bedrock_agent_hospital_matcher.tf`) – PrepareAgent/version detection was unreliable.
+- **Hospital Matcher:** Uses Converse API (fallback) when `BEDROCK_HOSPITAL_MATCHER_AGENT_ID` empty.
+- **Decision:** Migrate to **Bedrock AgentCore** – see [agentcore-implementation-plan.md](./agentcore-implementation-plan.md).
+
+---
+
 ## Next Steps
 
-1. Create Bedrock Agent in Console for Hospital Matcher; set `bedrock_hospital_matcher_agent_id` in tfvars
-2. Routing Agent + POST /route
-3. Phase 3 (multi-model consensus) in parallel
+1. Phase AC-1: AgentCore Runtime + Gateway + Hospital Matcher PoC
+2. Phase AC-2: Triage on AgentCore + Observability
+3. Routing Agent + POST /route
+4. Phase 3 (multi-model consensus) in parallel

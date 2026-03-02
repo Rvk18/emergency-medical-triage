@@ -23,7 +23,7 @@
 | **Multi-model** | Phase 3; multiple agents |
 | **Knowledge Base** | WHO guidelines via MCP or Aurora; RAG for validation. No prod data for hackathon—use MCP or synthetic data |
 | **Triage** | Converse API with tool use (faster iteration); Bedrock Agent optional |
-| **Hospital Matcher & Routing** | Use **Bedrock Agents** (per discussion) |
+| **Hospital Matcher & Routing** | Migrating to **Bedrock AgentCore** (Runtime, Gateway, Observability); Converse API fallback until ready |
 
 ---
 
@@ -87,8 +87,8 @@
 - [x] **Hospital Matcher Lambda**: Converse API + optional Bedrock Agent; POST /hospitals
 - [x] **API Gateway**: /hospitals
 - [x] **hospital_matches** schema; link to `triage_assessments.hospital_match_id`
-- [ ] **Hospital Matcher Bedrock Agent**: Create in Console; set `bedrock_hospital_matcher_agent_id`
-- [ ] **Routing Agent**: Bedrock Agent; POST /route
+- [ ] **AgentCore migration**: See [agentcore-implementation-plan.md](./agentcore-implementation-plan.md)
+- [ ] **Routing Agent**: AgentCore Runtime; POST /route
 
 ---
 
