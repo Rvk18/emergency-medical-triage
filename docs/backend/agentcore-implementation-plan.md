@@ -156,10 +156,22 @@
 
 | Phase | Focus | Status | Dependency |
 |-------|-------|--------|------------|
-| AC-1 | Runtime + Gateway + Hospital Matcher PoC | Next | None |
-| AC-2 | Triage + Observability | Pending | AC-1 |
-| AC-3 | Memory + Hospital MCP | Pending | AC-1, AC-2 |
-| AC-4 | Routing + Identity | Pending | AC-1 |
+| AC-1 | Runtime + Gateway + Hospital Matcher PoC | ✅ Done | None |
+| **A** | Wire Hospital Matcher agent to Gateway | Todo | AC-1 |
+| **B** | Add Eka MCP as Gateway target | Todo | AC-1 |
+| **C** | (Eka integration for Triage) | Todo | B |
+| AC-2 | Triage on AgentCore + Observability | Todo | AC-1 |
+| AC-3 | Memory + Hospital MCP | Todo | AC-1, AC-2 |
+| AC-4 | Routing + Identity | Todo | AC-1 |
+
+## TODO (Continue Later)
+
+1. **A** – Wire Hospital Matcher agent to connect to Gateway MCP; use `get_hospitals` tool from Gateway (OAuth token from Cognito)
+2. **B** – Add Eka MCP as Gateway target (Lambda calling Eka APIs; Eka key from Secrets Manager)
+3. **C** – Wire Triage agent to use Eka tools (drugs, treatment protocols)
+4. **AC-2** – Triage agent on AgentCore Runtime; full observability (traces, dashboards)
+5. **AC-3** – Memory (short/long-term); Hospital Matcher uses Gateway tools
+6. **AC-4** – Routing agent; POST /route; Identity (Cognito)
 
 ---
 

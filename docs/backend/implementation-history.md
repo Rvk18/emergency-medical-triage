@@ -145,9 +145,25 @@
 
 ---
 
-## Next Steps
+## AgentCore AC-1 Complete (Mar 2026)
 
-1. Phase AC-1: AgentCore Runtime + Gateway + Hospital Matcher PoC
-2. Phase AC-2: Triage on AgentCore + Observability
-3. Routing Agent + POST /route
-4. Phase 3 (multi-model consensus) in parallel
+### Implemented
+- **Hospital Matcher** on AgentCore Runtime (Strands + synthetic tool)
+- **Lambda** calls `InvokeAgentRuntime` when `use_agentcore=true`
+- **Eka config** in Secrets Manager (`eka_api_key` variable → `{project}/eka-config`)
+- **Gateway setup script** fixes: target name `get-hospitals-target` (no underscores), ConflictException handling for re-runs, `--gateway-id` for existing gateways
+
+### Gateway Status
+- MCP Gateway created, `get_hospitals` Lambda target added
+- `gateway_config.json` with gateway_url, gateway_id (gitignored)
+
+---
+
+## Next Steps (TODO)
+
+1. **A:** Wire Hospital Matcher agent to Gateway (use get_hospitals from Gateway instead of in-agent tool)
+2. **B:** Add Eka as Gateway target (Lambda/API); wire Triage to use Indian drugs/protocols
+3. **C:** (Combined with A/B as needed)
+4. **AC-2:** Triage on AgentCore + full Observability
+5. **AC-3:** Memory + Hospital MCP integration
+6. **AC-4:** Routing agent + POST /route + Identity

@@ -12,8 +12,10 @@ Prerequisites:
   - Set GATEWAY_GET_HOSPITALS_LAMBDA_ARN or pass as first arg
 
 Usage:
-  python scripts/setup_agentcore_gateway.py
-  python scripts/setup_agentcore_gateway.py arn:aws:lambda:us-east-1:ACCOUNT:function:NAME
+  python scripts/setup_agentcore_gateway.py <lambda_arn>
+  python scripts/setup_agentcore_gateway.py <lambda_arn> --gateway-id <existing_gateway_id>
+
+  If Gateway already exists (e.g. from a previous failed run), use --gateway-id to add the target only.
 """
 
 import json
@@ -35,6 +37,7 @@ except ImportError:
     sys.exit(1)
 
 import boto3
+from botocore.exceptions import ClientError
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -62,16 +65,19 @@ GET_HOSPITALS_TOOL_SCHEMA = {
 }
 
 
-def get_lambda_arn() -> str:
-    arn = os.environ.get("GATEWAY_GET_HOSPITALS_LAMBDA_ARN") or (
-        sys.argv[1] if len(sys.argv) > 1 else None
-    )
-    if not arn:
-        print("ERROR: Lambda ARN required.")
-        print("Set GATEWAY_GET_HOSPITALS_LAMBDA_ARN or pass as first argument.")
-        print("Example: python setup_agentcore_gateway.py arn:aws:lambda:us-east-1:123456789:function:emergency-medical-triage-dev-gateway-get-hospitals")
+def parse_args() -> tuple[str, str | None]:
+    """Return (lambda_arn, existing_gateway_id or None)."""
+    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    gateway_id = None
+    for i, a in enumerate(sys.argv[1:]):
+        if a == "--gateway-id" and i + 2 < len(sys.argv):
+            gateway_id = sys.argv[i + 2]
+            break
+    arn = os.environ.get("GATEWAY_GET_HOSPITALS_LAMBDA_ARN") or (args[0] if args else None)
+    if not arn or arn.startswith("--"):
+        print("ERROR: Lambda ARN required as first argument.")
         sys.exit(1)
-    return arn
+    return arn, gateway_id
 
 
 def add_lambda_permission_for_gateway(lambda_arn: str, gateway_role_arn: str) -> None:
@@ -92,40 +98,77 @@ def add_lambda_permission_for_gateway(lambda_arn: str, gateway_role_arn: str) ->
         logger.warning("Could not add Lambda permission: %s (you may need to add manually)", e)
 
 
+def gateway_url_from_id(gateway_id: str) -> str:
+    """Construct Gateway MCP URL from gateway ID."""
+    return f"https://{gateway_id}.gateway.bedrock-agentcore.{REGION}.amazonaws.com/mcp"
+
+
+def find_existing_gateway(control_client, name: str) -> dict | None:
+    """Find gateway by name. Return gateway dict with gatewayId, gatewayUrl."""
+    paginator = control_client.get_paginator("list_gateways")
+    for page in paginator.paginate():
+        for gw in page.get("items", []):
+            if gw.get("name") == name:
+                gid = gw.get("gatewayId")
+                if gid:
+                    url = gw.get("gatewayUrl") or gateway_url_from_id(gid)
+                    return {"gatewayId": gid, "gatewayUrl": url}
+    return None
+
+
 def setup_gateway() -> dict:
-    lambda_arn = get_lambda_arn()
+    lambda_arn, existing_gateway_id = parse_args()
     logger.info("Using Lambda ARN: %s", lambda_arn)
 
+    control_client = boto3.client("bedrock-agentcore-control", region_name=REGION)
     client = GatewayClient(region_name=REGION)
     client.logger.setLevel(logging.INFO)
 
-    # 1. Create OAuth authorizer with Cognito
-    logger.info("Creating OAuth authorization server...")
-    cognito_response = client.create_oauth_authorizer_with_cognito(GATEWAY_NAME)
-    logger.info("OAuth authorizer created")
+    gateway = None
+    cognito_response = {"client_info": None}
 
-    # 2. Create MCP Gateway
-    logger.info("Creating MCP Gateway...")
-    gateway = client.create_mcp_gateway(
-        name=GATEWAY_NAME,
-        role_arn=None,
-        authorizer_config=cognito_response["authorizer_config"],
-        enable_semantic_search=True,
-    )
-    logger.info("Gateway created: %s", gateway.get("gatewayUrl"))
+    if existing_gateway_id:
+        logger.info("Using existing Gateway ID: %s", existing_gateway_id)
+        detail = control_client.get_gateway(gatewayIdentifier=existing_gateway_id)
+        g = detail.get("gateway", {})
+        url = g.get("gatewayUrl") or gateway_url_from_id(existing_gateway_id)
+        gateway = {"gatewayId": existing_gateway_id, "gatewayUrl": url}
+    else:
+        # 1. Create OAuth authorizer with Cognito
+        logger.info("Creating OAuth authorization server...")
+        cognito_response = client.create_oauth_authorizer_with_cognito(GATEWAY_NAME)
+        logger.info("OAuth authorizer created")
 
-    # Fix IAM permissions (if toolkit created a role)
-    try:
-        client.fix_iam_permissions(gateway)
-        logger.info("Waiting 30s for IAM propagation...")
-        time.sleep(30)
-    except Exception as e:
-        logger.warning("fix_iam_permissions: %s", e)
+        # 2. Create MCP Gateway
+        logger.info("Creating MCP Gateway...")
+        try:
+            gateway = client.create_mcp_gateway(
+                name=GATEWAY_NAME,
+                role_arn=None,
+                authorizer_config=cognito_response["authorizer_config"],
+                enable_semantic_search=True,
+            )
+            logger.info("Gateway created: %s", gateway.get("gatewayUrl"))
+        except ClientError as e:
+            if e.response.get("Error", {}).get("Code") != "ConflictException":
+                raise
+            logger.info("Gateway '%s' already exists, reusing...", GATEWAY_NAME)
+            gateway = find_existing_gateway(control_client, GATEWAY_NAME)
+            if not gateway:
+                raise RuntimeError(f"Gateway '{GATEWAY_NAME}' exists but could not be found. Use --gateway-id <id>.")
+            cognito_response["client_info"] = None  # Use existing auth; client_info from prior run
 
-    # 3. Add Lambda target with get_hospitals tool (use boto3 for full control)
-    control_client = boto3.client("bedrock-agentcore-control", region_name=REGION)
+        # Fix IAM permissions (if toolkit created a role)
+        try:
+            client.fix_iam_permissions(gateway)
+            logger.info("Waiting 30s for IAM propagation...")
+            time.sleep(30)
+        except Exception as e:
+            logger.warning("fix_iam_permissions: %s", e)
+
+    # 3. Add Lambda target with get_hospitals tool
     gateway_id = gateway["gatewayId"]
-    target_name = "get_hospitals_target"
+    target_name = "get-hospitals-target"
 
     logger.info("Adding Lambda target with get_hospitals tool...")
     control_client.create_gateway_target(
@@ -161,8 +204,9 @@ def setup_gateway() -> dict:
         logger.warning("Could not fetch Gateway role for Lambda permission: %s", e)
 
     # 5. Save config
+    gateway_url = gateway.get("gatewayUrl") or gateway_url_from_id(gateway["gatewayId"])
     config = {
-        "gateway_url": gateway["gatewayUrl"],
+        "gateway_url": gateway_url,
         "gateway_id": gateway_id,
         "region": REGION,
         "client_info": cognito_response["client_info"],

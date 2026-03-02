@@ -40,3 +40,25 @@ resource "aws_secretsmanager_secret_version" "rds_config" {
     region   = var.aws_region
   })
 }
+
+# Eka Care API (for Eka MCP - Indian drugs, treatment protocols)
+# Set eka_api_key in terraform.tfvars or via -var="eka_api_key=..."
+resource "aws_secretsmanager_secret" "eka_config" {
+  count       = var.eka_api_key != "" ? 1 : 0
+  name        = "${local.name_prefix}/eka-config"
+  description = "Eka Care API credentials for MCP (drugs, treatment protocols)"
+
+  tags = {
+    Name    = "${local.name_prefix}-eka-config"
+    Project = var.project_name
+  }
+}
+
+resource "aws_secretsmanager_secret_version" "eka_config" {
+  count     = var.eka_api_key != "" ? 1 : 0
+  secret_id = aws_secretsmanager_secret.eka_config[0].id
+  secret_string = jsonencode({
+    api_key  = var.eka_api_key
+    client_id = var.eka_api_key
+  })
+}

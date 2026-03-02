@@ -50,7 +50,7 @@ The script will:
 ## Step 4: Use the Gateway
 
 - **MCP URL**: From `gateway_config.json` → `gateway_url`
-- **Tool name**: `get_hospitals_target___get_hospitals` (target name + `___` + tool name)
+- **Tool name**: `get-hospitals-target___get_hospitals` (target name + `___` + tool name)
 - **Auth**: Use `client_info` (client_id, client_secret, token_endpoint, scope) for OAuth client-credentials flow
 
 ## Lambda Handler Format (Reference)

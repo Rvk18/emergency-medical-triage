@@ -91,3 +91,11 @@ variable "agent_runtime_arn" {
   type        = string
   default     = ""
 }
+
+# Eka Care API (for Eka MCP - Indian drugs, treatment protocols)
+variable "eka_api_key" {
+  description = "Eka Care API key (from console.eka.care). Stored in Secrets Manager."
+  type        = string
+  default     = ""
+  sensitive   = true
+}
