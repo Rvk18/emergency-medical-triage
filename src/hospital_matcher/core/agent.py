@@ -1,8 +1,9 @@
-"""Hospital Matcher - Bedrock Agent or Converse API."""
+"""Hospital Matcher - AgentCore, Bedrock Agent, or Converse API."""
 
 import json
 import logging
 import os
+import time
 import uuid
 
 import boto3
@@ -15,6 +16,8 @@ logger = logging.getLogger(__name__)
 
 AGENT_ID = os.environ.get("BEDROCK_HOSPITAL_MATCHER_AGENT_ID", "")
 AGENT_ALIAS_ID = os.environ.get("BEDROCK_HOSPITAL_MATCHER_AGENT_ALIAS_ID", "TSTALIASID")
+USE_AGENTCORE = os.environ.get("USE_AGENTCORE", "").lower() in ("1", "true", "yes")
+AGENT_RUNTIME_ARN = os.environ.get("AGENT_RUNTIME_ARN", "")
 REGION = os.environ.get("AWS_REGION", "us-east-1")
 MODEL_ID = os.environ.get("BEDROCK_MODEL_ID", "us.anthropic.claude-sonnet-4-6")
 
@@ -60,10 +63,84 @@ def _fallback_result(reason: str) -> HospitalMatchResult:
 
 
 def match_hospitals(req: HospitalMatchRequest) -> HospitalMatchResult:
-    """Invoke Bedrock Agent or Converse API for hospital matching."""
+    """Invoke AgentCore, Bedrock Agent, or Converse API for hospital matching."""
+    start = time.perf_counter()
+    if USE_AGENTCORE and AGENT_RUNTIME_ARN:
+        result = _match_via_agentcore(req)
+        _log_trace("agentcore", start)
+        return result
     if AGENT_ID:
-        return _match_via_agent(req)
-    return _match_via_converse(req)
+        result = _match_via_agent(req)
+        _log_trace("bedrock_agent", start)
+        return result
+    result = _match_via_converse(req)
+    _log_trace("converse", start)
+    return result
+
+
+def _log_trace(source: str, start: float) -> None:
+    """Emit basic trace log for observability (queryable in CloudWatch Logs Insights)."""
+    duration_ms = (time.perf_counter() - start) * 1000
+    logger.info("HospitalMatcher source=%s duration_ms=%.2f", source, duration_ms)
+
+
+def _match_via_agentcore(req: HospitalMatchRequest) -> HospitalMatchResult:
+    """Invoke AgentCore Runtime agent."""
+    client = boto3.client("bedrock-agentcore", region_name=REGION)
+    session_id = str(uuid.uuid4())
+    payload = {
+        "severity": req.severity,
+        "recommendations": req.recommendations,
+        "limit": req.limit,
+    }
+    if req.triage_assessment_id:
+        payload["triage_assessment_id"] = req.triage_assessment_id
+    if req.patient_location_lat is not None and req.patient_location_lon is not None:
+        payload["patient_location_lat"] = req.patient_location_lat
+        payload["patient_location_lon"] = req.patient_location_lon
+
+    try:
+        response = client.invoke_agent_runtime(
+            agentRuntimeArn=AGENT_RUNTIME_ARN,
+            runtimeSessionId=session_id,
+            payload=json.dumps(payload).encode("utf-8"),
+        )
+    except Exception as e:
+        logger.error("AgentCore invocation failed: %s", e)
+        return _fallback_result(str(e))
+
+    # Parse response (streaming or JSON)
+    content_type = response.get("contentType", "")
+    body_parts = []
+    resp_stream = response.get("response")
+    if resp_stream:
+        for chunk in resp_stream:
+            if chunk:
+                body_parts.append(chunk.decode("utf-8"))
+
+    if "text/event-stream" in content_type:
+        full_text = "".join(body_parts)
+        for line in full_text.splitlines():
+            if line.startswith("data: ") and line != "data: [DONE]":
+                try:
+                    data = json.loads(line[6:])
+                    if isinstance(data, dict) and "hospitals" in data:
+                        result = _tool_input_to_result(data)
+                        if result:
+                            return result
+                except json.JSONDecodeError:
+                    pass
+    else:
+        try:
+            data = json.loads("".join(body_parts))
+            if isinstance(data, dict) and "hospitals" in data:
+                result = _tool_input_to_result(data)
+                if result:
+                    return result
+        except json.JSONDecodeError as e:
+            logger.warning("AgentCore response not valid JSON: %s", e)
+
+    return _fallback_result("AgentCore did not return structured matches")
 
 
 def _match_via_agent(req: HospitalMatchRequest) -> HospitalMatchResult:

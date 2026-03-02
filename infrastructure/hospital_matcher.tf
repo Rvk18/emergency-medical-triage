@@ -58,6 +58,8 @@ resource "aws_lambda_function" "hospital_matcher" {
       BEDROCK_HOSPITAL_MATCHER_AGENT_ID       = var.bedrock_hospital_matcher_agent_id
       BEDROCK_HOSPITAL_MATCHER_AGENT_ALIAS_ID = var.bedrock_hospital_matcher_agent_alias_id
       BEDROCK_MODEL_ID                        = var.bedrock_model_id
+      USE_AGENTCORE                           = tostring(var.use_agentcore)
+      AGENT_RUNTIME_ARN                       = var.agent_runtime_arn
     }
   }
 }

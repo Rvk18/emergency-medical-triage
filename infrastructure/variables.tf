@@ -78,3 +78,16 @@ variable "bedrock_hospital_matcher_agent_alias_id" {
   type        = string
   default     = "TSTALIASID"
 }
+
+# AgentCore (when use_agentcore=true, Hospital Matcher uses AgentCore Runtime)
+variable "use_agentcore" {
+  description = "Use AgentCore Runtime for Hospital Matcher (requires agent_runtime_arn)"
+  type        = bool
+  default     = false
+}
+
+variable "agent_runtime_arn" {
+  description = "AgentCore Runtime ARN for Hospital Matcher (from agentcore deploy)"
+  type        = string
+  default     = ""
+}

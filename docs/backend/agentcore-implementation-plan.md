@@ -6,6 +6,20 @@
 
 ---
 
+## Agreed Approach (Feb 2026)
+
+| Topic | Decision |
+|-------|----------|
+| **Experience** | No prior AgentCore use; Console access available |
+| **AC-1 scope** | Hospital Matcher only; migrate Triage, Routing once stable |
+| **Gateway data** | Try MCP for hospital knowledge if available; otherwise synthetic data only |
+| **IaC** | Terraform if not too time-consuming; otherwise Console |
+| **Cutover** | Converse fallback during migration; switch fully once AgentCore path is stable |
+| **Hospital data** | No MCP server for hackathon; synthetic/stub data is acceptable |
+| **AC-1 observability** | Include basic tracing/metrics in AC-1 |
+
+---
+
 ## Why AgentCore
 
 | Need | Current (Converse/Classic Agents) | AgentCore |
@@ -74,19 +88,21 @@
 
 ## Phases
 
-### Phase AC-1: Foundation (AgentCore Runtime + Gateway)
+### Phase AC-1: Foundation (AgentCore Runtime + Gateway + Observability)
 
-**Goal:** Stand up AgentCore Runtime and Gateway; connect one agent (Hospital Matcher) as proof of concept.
+**Goal:** Stand up AgentCore Runtime and Gateway; connect Hospital Matcher as proof of concept; add basic tracing/metrics.
 
 **Deliverables:**
-- [ ] AgentCore Runtime workspace/deployment
-- [ ] AgentCore Gateway configured
-- [ ] Hospital Matcher agent deployed to Runtime (or Lambda calling AgentCore API)
-- [ ] Gateway exposes `submit_hospital_matches` (or MCP when available)
-- [ ] POST /hospitals invokes AgentCore instead of Converse API
-- [ ] Terraform/CloudFormation for AgentCore resources
+- [ ] AgentCore Runtime workspace/deployment — **In progress** (agentcore/agent/)
+- [ ] AgentCore Gateway configured (Lambda or synthetic data; MCP if available) — **Deferred to AC-3** (using in-agent synthetic tool)
+- [x] Hospital Matcher agent deployed to Runtime (or Lambda calling AgentCore API)
+- [x] POST /hospitals invokes AgentCore when `use_agentcore=true` (Converse fallback)
+- [x] Basic tracing/metrics (CloudWatch Logs: `HospitalMatcher source= duration_ms=`)
+- [x] Terraform: `use_agentcore`, `agent_runtime_arn`, IAM for `InvokeAgentRuntime`
 
 **Dependencies:** AgentCore API/SDK availability in us-east-1.
+
+**Manual step:** Deploy the agent with `agentcore deploy` from `agentcore/agent/`, then set `agent_runtime_arn` in tfvars.
 
 ---
 
@@ -129,8 +145,8 @@
 
 ## Migration Strategy
 
-1. **Incremental:** Keep Converse API fallback until AgentCore path is stable.
-2. **Feature flags:** `USE_AGENTCORE` env var to toggle Hospital Matcher / Triage between Converse and AgentCore.
+1. **Incremental:** Keep Converse API fallback until AgentCore path is stable; then hard cutover (no long-term feature flag).
+2. **Feature flags:** `USE_AGENTCORE` env var to toggle during migration; remove once cutover complete.
 3. **Preserve contracts:** API request/response schemas unchanged.
 4. **Aurora unchanged:** Persistence layer stays; AgentCore replaces only the AI invocation path.
 
@@ -173,10 +189,14 @@
    - [AgentCore Developer Guide](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/develop-agents.html)
    - [AgentCore Python SDK](https://github.com/aws/amazon-bedrock-agentcore-sdk-python)
 
-2. **Create Runtime + Gateway (Console or IaC)**
+2. **Create Runtime + Gateway (Terraform or Console)**
    - Provision AgentCore Runtime workspace
-   - Configure Gateway with `submit_hospital_matches` (or Lambda) as tool
+   - Configure Gateway with `submit_hospital_matches` (Lambda or synthetic data as tool source)
 
 3. **Wire Hospital Matcher Lambda to AgentCore**
    - Add `USE_AGENTCORE` env var; when true, call AgentCore API instead of Converse
    - Preserve request/response contract
+   - Converse fallback when `USE_AGENTCORE=false`; hard cutover once stable
+
+4. **Basic tracing/metrics** ✓
+   - CloudWatch Logs: `HospitalMatcher source=agentcore|converse|bedrock_agent duration_ms=...`

@@ -25,7 +25,10 @@ def handler(event: dict, context: object) -> dict:
         return _response(400, {"error": str(e)})
 
     try:
+        request_id = getattr(context, "aws_request_id", None) if context else None
         result = match_hospitals(request)
+        if request_id:
+            logger.info("HospitalMatcher success request_id=%s", request_id)
         return _response(200, result.model_dump(mode="json"))
     except Exception as e:
         logger.exception("Hospital matching failed")
