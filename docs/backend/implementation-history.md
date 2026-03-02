@@ -122,6 +122,21 @@
 
 ---
 
+## AgentCore Gateway get_hospitals (Mar 2026)
+
+### Implemented
+- **Lambda** (`infrastructure/gateway_get_hospitals_lambda_src/lambda_handler.py`): AgentCore Gateway target implementing `get_hospitals` tool. Event has `severity`, `limit`; context has `bedrockAgentCoreToolName` (strip `TARGET___` prefix). Returns synthetic Indian hospital data (same structure as `agentcore/agent/synthetic_hospitals.py`).
+- **Terraform** (`infrastructure/gateway_get_hospitals.tf`): Creates Lambda + IAM role. Outputs `gateway_get_hospitals_lambda_arn` for setup script.
+- **Setup script** (`scripts/setup_agentcore_gateway.py`): Uses `bedrock_agentcore_starter_toolkit` GatewayClient to create MCP Gateway with Cognito OAuth, adds Lambda target with get_hospitals tool schema, saves `gateway_config.json`.
+- **Docs** (`docs/backend/agentcore-gateway-manual-steps.md`): Manual steps for Gateway setup (Terraform creates Lambda; script creates Gateway).
+
+### Flow
+1. `terraform apply` → Lambda created
+2. `python scripts/setup_agentcore_gateway.py <lambda_arn>` → Gateway + target + gateway_config.json
+3. Agents use Gateway MCP URL with OAuth token; tool name `{target_name}___get_hospitals`
+
+---
+
 ## Cleanup: Bedrock Agent Removed (AgentCore Migration)
 
 - **Removed:** Classic Bedrock Agent Terraform (`bedrock_agent_hospital_matcher.tf`) – PrepareAgent/version detection was unreliable.
