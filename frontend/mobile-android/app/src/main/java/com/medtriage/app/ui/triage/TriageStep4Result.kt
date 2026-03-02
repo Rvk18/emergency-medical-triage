@@ -1,6 +1,5 @@
 package com.medtriage.app.ui.triage
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -8,25 +7,25 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import com.medtriage.app.data.triage.SeverityLevel
 import com.medtriage.app.data.triage.TriageResult
-import com.medtriage.app.ui.theme.SeverityCritical
-import com.medtriage.app.ui.theme.SeverityHigh
-import com.medtriage.app.ui.theme.SeverityLow
-import com.medtriage.app.ui.theme.SeverityMedium
+import com.medtriage.app.ui.components.ConfidenceBar
+import com.medtriage.app.ui.components.ConfirmationDialog
+import com.medtriage.app.ui.components.CriticalBanner
+import com.medtriage.app.ui.components.SectionCard
+import com.medtriage.app.ui.components.SectionCardVariant
+import com.medtriage.app.ui.components.SeverityChip
 import com.medtriage.app.ui.theme.Spacing
-
-private fun severityColor(level: SeverityLevel): Color = when (level) {
-    SeverityLevel.CRITICAL -> SeverityCritical
-    SeverityLevel.HIGH -> SeverityHigh
-    SeverityLevel.MEDIUM -> SeverityMedium
-    SeverityLevel.LOW -> SeverityLow
-}
 
 @Composable
 fun TriageStep4Result(
@@ -34,48 +33,74 @@ fun TriageStep4Result(
     onProceedToReport: () -> Unit,
     onOverride: () -> Unit
 ) {
+    var showOverrideDialog by remember { mutableStateOf(false) }
     val displaySeverity = if (result.confidencePercent < 85) SeverityLevel.HIGH else result.severity
     val showFlagForReview = result.flaggedForReview || result.confidencePercent < 85
+
+    if (showOverrideDialog) {
+        ConfirmationDialog(
+            title = "Override severity",
+            body = "Changing the AI assessment will be logged for audit. Confirm override?",
+            confirmLabel = "Override",
+            dismissLabel = "Cancel",
+            onConfirm = {
+                showOverrideDialog = false
+                onOverride()
+            },
+            onDismiss = { showOverrideDialog = false }
+        )
+    }
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(Spacing.space16)
+            .padding(Spacing.screenHorizontal)
             .verticalScroll(rememberScrollState())
     ) {
-        Text("Step 4 of 4 — Result", style = MaterialTheme.typography.titleMedium)
-        Spacer(Modifier.height(Spacing.space16))
-        Text(
-            text = "Severity: $displaySeverity",
-            style = MaterialTheme.typography.titleLarge,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(Spacing.space8)
-                .background(severityColor(displaySeverity).copy(alpha = 0.2f))
-                .padding(Spacing.space8)
-        )
-        if (showFlagForReview) {
-            Text(
-                "Treat as HIGH priority — Flag for doctor review",
-                style = MaterialTheme.typography.bodyMedium,
-                color = SeverityHigh,
-                modifier = Modifier.padding(vertical = Spacing.space8)
-            )
+        if (result.severity == SeverityLevel.CRITICAL) {
+            CriticalBanner(message = "CRITICAL — Immediate transport. Do not delay.")
+            Spacer(Modifier.height(Spacing.space16))
         }
-        Text("Confidence: ${result.confidencePercent}%", style = MaterialTheme.typography.bodyLarge)
-        Spacer(Modifier.height(Spacing.space8))
-        Text("Recommended actions:", style = MaterialTheme.typography.labelLarge)
-        result.recommendedActions.forEach { Text("• $it", style = MaterialTheme.typography.bodyMedium) }
+        Text("Step 4 of 4 — Result", style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onSurface)
+        Spacer(Modifier.height(Spacing.sectionGap))
+
+        SectionCard(title = "Assessment") {
+            SeverityChip(severity = displaySeverity, modifier = Modifier.padding(bottom = Spacing.space12))
+            ConfidenceBar(confidencePercent = result.confidencePercent)
+        }
+        if (showFlagForReview) {
+            Spacer(Modifier.height(Spacing.space16))
+            SectionCard(
+                title = "Flag for doctor review",
+                variant = SectionCardVariant.Warning
+            ) {
+                Text(
+                    "Treat as HIGH priority. Low confidence — recommend doctor review.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        }
         Spacer(Modifier.height(Spacing.space16))
-        Text("Safety disclaimers:", style = MaterialTheme.typography.labelLarge)
-        result.safetyDisclaimers.forEach { Text(it, style = MaterialTheme.typography.bodySmall) }
-        Spacer(Modifier.height(Spacing.space24))
-        androidx.compose.material3.OutlinedButton(onClick = onOverride, modifier = Modifier.fillMaxWidth()) {
+
+        SectionCard(title = "Recommended actions") {
+            result.recommendedActions.forEach { action ->
+                Text("• $action", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(vertical = Spacing.space4))
+            }
+        }
+        Spacer(Modifier.height(Spacing.space16))
+
+        SectionCard(title = "Safety notice") {
+            result.safetyDisclaimers.forEach { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        }
+        Spacer(Modifier.height(Spacing.sectionGap))
+
+        OutlinedButton(onClick = { showOverrideDialog = true }, modifier = Modifier.fillMaxWidth()) {
             Text("Override")
         }
-        Spacer(Modifier.height(Spacing.space8))
-        androidx.compose.material3.Button(onClick = onProceedToReport, modifier = Modifier.fillMaxWidth()) {
+        Spacer(Modifier.height(Spacing.space12))
+        Button(onClick = onProceedToReport, modifier = Modifier.fillMaxWidth()) {
             Text("Proceed to Report")
         }
+        Spacer(Modifier.height(Spacing.space40))
     }
 }

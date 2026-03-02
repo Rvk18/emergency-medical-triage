@@ -18,6 +18,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import com.medtriage.app.ui.components.CriticalBanner
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hierarchy
@@ -27,6 +28,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.medtriage.app.ui.components.OfflineBanner
+import com.medtriage.app.ui.components.SyncStatus
+import com.medtriage.app.ui.components.SyncStatusIndicator
 import com.medtriage.app.ui.navigation.NavRoutes
 import com.medtriage.app.ui.dashboard.DashboardFlowScreen
 import com.medtriage.app.ui.hospitals.HospitalsFlowScreen
@@ -46,7 +49,10 @@ fun AppShell(
     navController: NavHostController = rememberNavController(),
     isOffline: Boolean = false,
     lastSyncTime: String? = null,
-    roleBadge: String = "Healthcare Worker"
+    syncStatus: SyncStatus = SyncStatus.Synced,
+    roleBadge: String = "Healthcare Worker",
+    showCriticalBanner: Boolean = false,
+    criticalBannerMessage: String? = null
 ) {
     val navBackStackEntry = navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry.value?.destination
@@ -64,6 +70,7 @@ fun AppShell(
                 TopAppBar(
                     title = { Text("MedTriage AI") },
                     actions = {
+                        SyncStatusIndicator(status = syncStatus, lastSyncTime = lastSyncTime)
                         Text(
                             text = roleBadge,
                             style = androidx.compose.material3.MaterialTheme.typography.labelMedium,
@@ -77,6 +84,9 @@ fun AppShell(
                     )
                 )
                 OfflineBanner(visible = isOffline, lastSyncTime = lastSyncTime)
+                if (showCriticalBanner) {
+                    CriticalBanner(message = criticalBannerMessage ?: "CRITICAL — Immediate transport. Do not delay.")
+                }
             }
         },
         bottomBar = {

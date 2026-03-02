@@ -2,7 +2,9 @@ package com.medtriage.app.ui.triage
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
@@ -36,9 +38,11 @@ fun TriageFlowScreen(
             )
         }
         state.currentStep == 0 -> {
-            Box(Modifier.fillMaxSize().padding(Spacing.space16), contentAlignment = Alignment.Center) {
+            Box(Modifier.fillMaxSize().padding(Spacing.screenHorizontal), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Start new triage assessment")
+                    Text("Start new triage assessment", style = androidx.compose.material3.MaterialTheme.typography.headlineSmall)
+                    Text("Capture patient info, symptoms, and vitals for AI assessment", style = androidx.compose.material3.MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = Spacing.space8))
+                    Spacer(modifier = Modifier.height(Spacing.sectionGap))
                     Button(onClick = { viewModel.goToStep(1) }) { Text("Start") }
                 }
             }
@@ -60,8 +64,8 @@ fun TriageFlowScreen(
             isAssessing = state.isAssessing
         )
         else -> {
-            Box(Modifier.fillMaxSize().padding(Spacing.space16), contentAlignment = Alignment.Center) {
-                Text("Loading…")
+            Box(Modifier.fillMaxSize().padding(Spacing.screenHorizontal), contentAlignment = Alignment.Center) {
+                Text("Loading…", style = androidx.compose.material3.MaterialTheme.typography.bodyLarge)
             }
         }
     }

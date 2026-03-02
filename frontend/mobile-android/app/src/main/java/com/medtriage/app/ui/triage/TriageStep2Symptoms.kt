@@ -31,11 +31,11 @@ fun TriageStep2Symptoms(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(Spacing.space16)
+            .padding(Spacing.screenHorizontal)
             .verticalScroll(rememberScrollState())
     ) {
-        Text("Step 2 of 4 — Symptoms", style = androidx.compose.material3.MaterialTheme.typography.titleMedium)
-        Spacer(Modifier.height(Spacing.space16))
+        Text("Step 2 of 4 — Symptoms", style = androidx.compose.material3.MaterialTheme.typography.headlineSmall)
+        Spacer(Modifier.height(Spacing.sectionGap))
         OutlinedTextField(
             value = freeText,
             onValueChange = { freeText = it; onUpdate(symptoms.copy(freeText = it)) },

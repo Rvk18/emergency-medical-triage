@@ -13,6 +13,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.medtriage.app.data.triage.TriageResult
+import com.medtriage.app.ui.components.ConfidenceBar
+import com.medtriage.app.ui.components.SectionCard
+import com.medtriage.app.ui.components.SeverityChip
 import com.medtriage.app.ui.theme.Spacing
 
 @Composable
@@ -23,20 +26,30 @@ fun TriageReportScreen(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(Spacing.space16)
+            .padding(Spacing.screenHorizontal)
             .verticalScroll(rememberScrollState())
     ) {
-        Text("Triage Report", style = MaterialTheme.typography.headlineMedium)
+        Text("Triage Report", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onSurface)
+        Spacer(Modifier.height(Spacing.sectionGap))
+
+        SectionCard(title = "Summary") {
+            Text("ID: ${result.emergencyId}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.height(Spacing.space12))
+            SeverityChip(severity = result.severity, modifier = Modifier.padding(bottom = Spacing.space12))
+            ConfidenceBar(confidencePercent = result.confidencePercent)
+        }
         Spacer(Modifier.height(Spacing.space16))
-        Text("Emergency ID: ${result.emergencyId}", style = MaterialTheme.typography.bodyMedium)
-        Text("Severity: ${result.severity}", style = MaterialTheme.typography.bodyLarge)
-        Text("Confidence: ${result.confidencePercent}%", style = MaterialTheme.typography.bodyMedium)
-        Spacer(Modifier.height(Spacing.space8))
-        Text("Recommended actions:", style = MaterialTheme.typography.labelLarge)
-        result.recommendedActions.forEach { Text("• $it", style = MaterialTheme.typography.bodyMedium) }
-        Spacer(Modifier.height(Spacing.space24))
+
+        SectionCard(title = "Recommended actions") {
+            result.recommendedActions.forEach { action ->
+                Text("• $action", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(vertical = Spacing.space4))
+            }
+        }
+        Spacer(Modifier.height(Spacing.sectionGap))
+
         Button(onClick = onProceedToHospitalMatching, modifier = Modifier.fillMaxWidth()) {
             Text("Proceed to Hospital Matching")
         }
+        Spacer(Modifier.height(Spacing.space40))
     }
 }

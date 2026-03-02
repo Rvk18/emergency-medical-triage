@@ -32,11 +32,11 @@ fun TriageStep1PatientInfo(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(Spacing.space16)
+            .padding(Spacing.screenHorizontal)
             .verticalScroll(rememberScrollState())
     ) {
-        Text("Step 1 of 4 — Patient info", style = androidx.compose.material3.MaterialTheme.typography.titleMedium)
-        Spacer(Modifier.height(Spacing.space16))
+        Text("Step 1 of 4 — Patient info", style = androidx.compose.material3.MaterialTheme.typography.headlineSmall)
+        Spacer(Modifier.height(Spacing.sectionGap))
         OutlinedTextField(
             value = age,
             onValueChange = { age = it; onUpdate(patientInfo.copy(age = it.toIntOrNull())) },
