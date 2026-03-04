@@ -155,15 +155,18 @@
 
 ### Gateway Status
 - MCP Gateway created, `get_hospitals` Lambda target added
+- **A (done):** Hospital Matcher agent uses Gateway when GATEWAY_* env vars set on Runtime (`agentcore/agent/gateway_client.py`, fallback to synthetic)
+- **B (done):** Eka Lambda target (`gateway_eka.tf`, `gateway_eka_lambda_src/`); setup script `--eka <arn>`; tools `eka-target___search_medications`, `eka-target___search_protocols`
+- **C (done):** Triage Converse flow uses Eka when GATEWAY_* set on Triage Lambda (`triage/core/gateway_client.py`, `get_triage_tool_config_with_eka`, multi-round tool loop in `agent.py`)
 - `gateway_config.json` with gateway_url, gateway_id (gitignored)
 
 ---
 
 ## Next Steps (TODO)
 
-1. **A:** Wire Hospital Matcher agent to Gateway (use get_hospitals from Gateway instead of in-agent tool)
-2. **B:** Add Eka as Gateway target (Lambda/API); wire Triage to use Indian drugs/protocols
-3. **C:** (Combined with A/B as needed)
+1. **A:** Wire Hospital Matcher agent to Gateway (use get_hospitals from Gateway instead of in-agent tool) — **Done**
+2. **B:** Add Eka as Gateway target (Lambda/API); wire Triage to use Indian drugs/protocols — **Done**
+3. **C:** (Combined with A/B as needed) — **Done** (Triage uses Eka via Gateway)
 4. **AC-2:** Triage on AgentCore + full Observability
 5. **AC-3:** Memory + Hospital MCP integration
 6. **AC-4:** Routing agent + POST /route + Identity

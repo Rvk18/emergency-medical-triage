@@ -14,8 +14,10 @@ Prerequisites:
 Usage:
   python scripts/setup_agentcore_gateway.py <lambda_arn>
   python scripts/setup_agentcore_gateway.py <lambda_arn> --gateway-id <existing_gateway_id>
+  python scripts/setup_agentcore_gateway.py <hospitals_lambda_arn> --eka <eka_lambda_arn>
 
   If Gateway already exists (e.g. from a previous failed run), use --gateway-id to add the target only.
+  Use --eka to add Eka (Indian drugs/protocols) as a second Gateway target.
 """
 
 import json
@@ -51,43 +53,83 @@ GET_HOSPITALS_TOOL_SCHEMA = {
     "inputSchema": {
         "type": "object",
         "properties": {
-            "severity": {
-                "type": "string",
-                "description": "Triage severity: critical, high, medium, or low",
-            },
-            "limit": {
-                "type": "integer",
-                "description": "Max number of hospitals to return (default 3, max 10)",
-            },
+            "severity": {"type": "string", "description": "Triage severity: critical, high, medium, or low"},
+            "limit": {"type": "integer", "description": "Max number of hospitals to return (default 3, max 10)"},
         },
         "required": ["severity"],
     },
 }
 
+# Eka Care tools (Indian drugs, treatment protocols)
+EKA_SEARCH_MEDICATIONS_SCHEMA = {
+    "name": "search_medications",
+    "description": "Search Indian branded drugs by drug name, form, generic names, or volume. Returns medications with name, generic_name, manufacturer_name, product_type.",
+    "inputSchema": {
+        "type": "object",
+        "properties": {
+            "drug_name": {"type": "string", "description": "Branded name e.g. Glim 1mg"},
+            "form": {"type": "string", "description": "Form e.g. Tablet, Syrup"},
+            "generic_names": {"type": "string", "description": "Generic name(s), comma-separated e.g. Glimeperide, Metformin"},
+            "volumes": {"type": "string", "description": "Volume e.g. 650, 1000"},
+        },
+    },
+}
+EKA_SEARCH_PROTOCOLS_SCHEMA = {
+    "name": "search_protocols",
+    "description": "Search Indian treatment protocols (ICMR, RSSDI). Provide list of queries with query, tag, publisher.",
+    "inputSchema": {
+        "type": "object",
+        "properties": {
+            "queries": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "query": {"type": "string", "description": "Concise search phrase"},
+                        "tag": {"type": "string", "description": "Condition/tag to filter"},
+                        "publisher": {"type": "string", "description": "Publisher name"},
+                    },
+                    "required": ["query", "tag", "publisher"],
+                },
+            },
+        },
+        "required": ["queries"],
+    },
+}
 
-def parse_args() -> tuple[str, str | None]:
-    """Return (lambda_arn, existing_gateway_id or None)."""
+
+def parse_args() -> tuple[str, str | None, str | None]:
+    """Return (hospitals_lambda_arn, existing_gateway_id or None, eka_lambda_arn or None)."""
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     gateway_id = None
-    for i, a in enumerate(sys.argv[1:]):
-        if a == "--gateway-id" and i + 2 < len(sys.argv):
-            gateway_id = sys.argv[i + 2]
-            break
+    eka_arn = os.environ.get("GATEWAY_EKA_LAMBDA_ARN", "").strip() or None
+    i = 0
+    while i < len(sys.argv) - 1:
+        if sys.argv[i] == "--gateway-id":
+            gateway_id = sys.argv[i + 1]
+            i += 2
+            continue
+        if sys.argv[i] == "--eka":
+            eka_arn = sys.argv[i + 1]
+            i += 2
+            continue
+        i += 1
     arn = os.environ.get("GATEWAY_GET_HOSPITALS_LAMBDA_ARN") or (args[0] if args else None)
     if not arn or arn.startswith("--"):
         print("ERROR: Lambda ARN required as first argument.")
         sys.exit(1)
-    return arn, gateway_id
+    return arn, gateway_id, eka_arn
 
 
-def add_lambda_permission_for_gateway(lambda_arn: str, gateway_role_arn: str) -> None:
+def add_lambda_permission_for_gateway(lambda_arn: str, gateway_role_arn: str, statement_suffix: str = "") -> None:
     """Allow Gateway execution role to invoke our Lambda."""
     client = boto3.client("lambda", region_name=REGION)
     fn_name = lambda_arn.split(":")[-1]
+    statement_id = "AllowAgentCoreGatewayInvoke" + (statement_suffix or "")
     try:
         client.add_permission(
             FunctionName=fn_name,
-            StatementId="AllowAgentCoreGatewayInvoke",
+            StatementId=statement_id,
             Action="lambda:InvokeFunction",
             Principal=gateway_role_arn,
         )
@@ -117,8 +159,10 @@ def find_existing_gateway(control_client, name: str) -> dict | None:
 
 
 def setup_gateway() -> dict:
-    lambda_arn, existing_gateway_id = parse_args()
+    lambda_arn, existing_gateway_id, eka_lambda_arn = parse_args()
     logger.info("Using Lambda ARN: %s", lambda_arn)
+    if eka_lambda_arn:
+        logger.info("Eka Lambda ARN: %s", eka_lambda_arn)
 
     control_client = boto3.client("bedrock-agentcore-control", region_name=REGION)
     client = GatewayClient(region_name=REGION)
@@ -191,6 +235,43 @@ def setup_gateway() -> dict:
     )
     logger.info("Lambda target added")
 
+    # 3b. Optionally add Eka target (search_medications, search_protocols)
+    if eka_lambda_arn:
+        eka_target_name = "eka-target"
+        logger.info("Adding Eka Lambda target (%s)...", eka_target_name)
+        try:
+            control_client.create_gateway_target(
+                gatewayIdentifier=gateway_id,
+                name=eka_target_name,
+                description="Eka Care tools: Indian drugs and treatment protocols",
+                targetConfiguration={
+                    "mcp": {
+                        "lambda": {
+                            "lambdaArn": eka_lambda_arn,
+                            "toolSchema": {
+                                "inlinePayload": [EKA_SEARCH_MEDICATIONS_SCHEMA, EKA_SEARCH_PROTOCOLS_SCHEMA],
+                            },
+                        }
+                    }
+                },
+                credentialProviderConfigurations=[
+                    {"credentialProviderType": "GATEWAY_IAM_ROLE"},
+                ],
+            )
+            logger.info("Eka target added. Tool names: %s___search_medications, %s___search_protocols", eka_target_name, eka_target_name)
+            try:
+                gw_response = control_client.get_gateway(gatewayIdentifier=gateway_id)
+                role_arn = gw_response.get("gateway", {}).get("executionRoleArn")
+        if role_arn:
+            add_lambda_permission_for_gateway(eka_lambda_arn, role_arn, "Eka")
+            except Exception as e:
+                logger.warning("Could not add Eka Lambda permission: %s", e)
+        except ClientError as e:
+            if e.response.get("Error", {}).get("Code") == "ConflictException":
+                logger.info("Eka target already exists")
+            else:
+                raise
+
     # 4. Add Lambda permission for Gateway to invoke our function
     # Get Gateway details to find execution role
     try:
@@ -213,6 +294,9 @@ def setup_gateway() -> dict:
         "target_name": target_name,
         "lambda_arn": lambda_arn,
     }
+    if eka_lambda_arn:
+        config["eka_target_name"] = "eka-target"
+        config["eka_lambda_arn"] = eka_lambda_arn
 
     output_path = os.path.join(PROJECT_ROOT, "gateway_config.json")
     with open(output_path, "w") as f:
@@ -224,6 +308,8 @@ def setup_gateway() -> dict:
     print("Gateway URL:", config["gateway_url"])
     print("Gateway ID:", config["gateway_id"])
     print(f"Tool name (MCP): {target_name}___get_hospitals")
+    if eka_lambda_arn:
+        print("Eka tools: eka-target___search_medications, eka-target___search_protocols")
     print("Config saved to: gateway_config.json")
     print("=" * 60)
 

@@ -1,7 +1,8 @@
 """
 Hospital Matcher AgentCore agent.
 
-Receives triage input, uses synthetic hospital tool, returns JSON with hospitals + safety_disclaimer.
+Receives triage input, uses get_hospitals from Gateway MCP (when configured) or in-agent
+synthetic tool, returns JSON with hospitals + safety_disclaimer.
 """
 
 import json
@@ -10,6 +11,7 @@ import logging
 from bedrock_agentcore import BedrockAgentCoreApp
 from strands import Agent, tool
 
+from gateway_client import _is_gateway_configured, get_hospitals_via_gateway
 from synthetic_hospitals import get_synthetic_hospitals
 
 logger = logging.getLogger(__name__)
@@ -19,7 +21,12 @@ app = BedrockAgentCoreApp()
 
 @tool
 def get_synthetic_hospitals_tool(severity: str, limit: int = 3) -> dict:
-    """Get synthetic hospital recommendations for the given severity. Use this to fetch hospital options before returning your final recommendation."""
+    """Get hospital recommendations for the given severity. Use this to fetch hospital options before returning your final recommendation. When Gateway is configured, uses Gateway MCP get_hospitals; otherwise synthetic data."""
+    if _is_gateway_configured():
+        try:
+            return get_hospitals_via_gateway(severity=severity, limit=limit)
+        except Exception as e:
+            logger.warning("Gateway get_hospitals failed, falling back to synthetic: %s", e)
     return get_synthetic_hospitals(severity=severity, limit=limit)
 
 

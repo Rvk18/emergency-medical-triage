@@ -14,7 +14,7 @@ import uuid
 import boto3
 
 from triage.core.instructions import TRIAGE_SYSTEM_PROMPT
-from triage.core.tools import get_triage_tool_config
+from triage.core.tools import get_triage_tool_config, get_triage_tool_config_with_eka
 from triage.models.triage import TriageRequest, TriageResult
 
 logger = logging.getLogger(__name__)
@@ -85,6 +85,7 @@ def assess_triage(request: TriageRequest) -> TriageResult:
     """
     Invoke Bedrock Agent or Converse API for triage assessment.
     Uses tool use / Return Control for structured output; validates with Pydantic.
+    When Gateway is configured, Converse can use Eka tools (search_medications, search_protocols) before submitting.
     """
     if AGENT_ID:
         return _assess_via_agent(request)
@@ -128,41 +129,82 @@ def _assess_via_agent(request: TriageRequest) -> TriageResult:
 def _assess_via_converse(request: TriageRequest) -> TriageResult:
     """
     Use Converse API with tool use (Claude Cookbook pattern).
-    Model calls submit_triage_result tool; we extract input and validate with Pydantic.
+    When Gateway/Eka is configured, model may call search_indian_medications or search_treatment_protocols
+    before submit_triage_result; we execute those via Gateway and loop until submit_triage_result.
     """
+    from triage.core.gateway_client import is_gateway_configured, search_medications, search_protocols
+
     model_id = os.environ.get("BEDROCK_MODEL_ID", "us.anthropic.claude-3-5-sonnet-v2:0")
     client = boto3.client("bedrock-runtime", region_name=REGION)
-    tool_config = get_triage_tool_config()
+    tool_config = get_triage_tool_config_with_eka()
     user_prompt = _build_user_prompt(request)
 
     messages = [
         {"role": "user", "content": [{"text": user_prompt}]},
     ]
+    max_rounds = 8
+    for _ in range(max_rounds):
+        try:
+            response = client.converse(
+                modelId=model_id,
+                messages=messages,
+                system=[{"text": TRIAGE_SYSTEM_PROMPT}],
+                toolConfig=tool_config,
+                inferenceConfig={"maxTokens": 1024},
+            )
+        except Exception as e:
+            logger.error("Converse invocation failed: %s", e)
+            return _safety_fallback(str(e))
+        output = response.get("output", {})
+        stop_reason = response.get("stopReason", "")
+        msg = output.get("message", {})
 
-    try:
-        response = client.converse(
-            modelId=model_id,
-            messages=messages,
-            system=[{"text": TRIAGE_SYSTEM_PROMPT}],
-            toolConfig=tool_config,
-            inferenceConfig={"maxTokens": 1024},
-        )
-    except Exception as e:
-        logger.error("Converse invocation failed: %s", e)
-        raise
-
-    output = response.get("output", {})
-    stop_reason = response.get("stopReason", "")
-    msg = output.get("message", {})
-
-    if stop_reason == "tool_use":
-        for block in msg.get("content", []):
-            if "toolUse" in block:
-                tool = block["toolUse"]
-                if tool.get("name") == "submit_triage_result":
-                    tool_input = tool.get("input", {})
-                    result = _tool_input_to_result(tool_input)
-                    if result:
-                        return result
+        if stop_reason == "tool_use":
+            content = msg.get("content", [])
+            tool_results = []
+            for block in content:
+                if "toolUse" in block:
+                    tool = block["toolUse"]
+                    name = tool.get("name", "")
+                    tool_id = tool.get("toolUseId", "")
+                    tool_input = tool.get("input", {}) or {}
+                    if name == "submit_triage_result":
+                        result = _tool_input_to_result(tool_input)
+                        if result:
+                            return result
+                        tool_results.append({"toolUseId": tool_id, "text": "Invalid tool input."})
+                    elif name == "search_indian_medications" and is_gateway_configured():
+                        try:
+                            out = search_medications(
+                                drug_name=tool_input.get("drug_name"),
+                                form=tool_input.get("form"),
+                                generic_names=tool_input.get("generic_names"),
+                            )
+                            text = json.dumps(out.get("medications", out), indent=2)
+                        except Exception as e:
+                            text = f"Error: {e}"
+                        tool_results.append({"toolUseId": tool_id, "text": text})
+                    elif name == "search_treatment_protocols" and is_gateway_configured():
+                        try:
+                            out = search_protocols(queries=tool_input.get("queries", []))
+                            text = json.dumps(out.get("protocols", out), indent=2)
+                        except Exception as e:
+                            text = f"Error: {e}"
+                        tool_results.append({"toolUseId": tool_id, "text": text})
+                    else:
+                        tool_results.append({"toolUseId": tool_id, "text": "Tool not available."})
+            if tool_results:
+                messages.append({"role": "assistant", "content": content})
+                messages.append({
+                    "role": "user",
+                    "content": [
+                        {"toolResult": {"toolUseId": tr["toolUseId"], "content": [{"text": tr["text"]}]}}
+                        for tr in tool_results
+                    ],
+                })
+            else:
+                break
+        else:
+            break
 
     return _safety_fallback("Model did not call submit_triage_result tool")

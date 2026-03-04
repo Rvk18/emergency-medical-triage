@@ -31,6 +31,8 @@ agentcore invoke '{"severity":"high","recommendations":["Emergency department"],
 
 ## Architecture
 
-- **Agent**: Strands + Bedrock; uses `get_synthetic_hospitals` tool for mock Indian hospital data.
+- **Agent**: Strands + Bedrock; uses **Gateway MCP** `get_hospitals` when Gateway env vars are set, else in-agent synthetic data.
 - **Lambda**: When `USE_AGENTCORE=true`, calls `InvokeAgentRuntime` instead of Converse API.
-- **Gateway**: To be added in AC-3 (Hospital MCP).
+- **Gateway wiring (A)**: Set on the Runtime (Console or deployment config) from `gateway_config.json`:
+  - `GATEWAY_MCP_URL`, `GATEWAY_CLIENT_ID`, `GATEWAY_CLIENT_SECRET`, `GATEWAY_TOKEN_ENDPOINT`, optional `GATEWAY_SCOPE`
+  - Then redeploy: `agentcore deploy`

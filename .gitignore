@@ -9,6 +9,7 @@ lambda_health.zip
 hospital_matcher_lambda.zip
 hospital_matcher_lambda_src/
 gateway_get_hospitals_lambda.zip
+gateway_eka_lambda.zip
 gateway_config.json
 
 # Secrets and credentials

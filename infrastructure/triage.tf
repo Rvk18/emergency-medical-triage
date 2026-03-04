@@ -5,6 +5,8 @@ resource "null_resource" "build_triage_lambda" {
     src_models = filesha256("${path.module}/../src/triage/models/triage.py")
     src_db     = filesha256("${path.module}/../src/triage/core/db.py")
     src_agent  = filesha256("${path.module}/../src/triage/core/agent.py")
+    src_tools  = filesha256("${path.module}/../src/triage/core/tools.py")
+    src_gw     = filesha256("${path.module}/../src/triage/core/gateway_client.py")
     script     = filesha256("${path.module}/../scripts/build_triage_lambda.sh")
   }
   provisioner "local-exec" {
