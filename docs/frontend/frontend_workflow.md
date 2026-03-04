@@ -274,10 +274,10 @@ flowchart TD
 |---|---|---|
 | `/auth/login` | POST | Authenticate user, return JWT |
 | `/auth/validate` | GET | Validate token & role |
-| `/triage/assess` | POST | Submit symptoms → get severity |
+| `/triage/assess` | POST | Submit symptoms → get severity; send optional `session_id` (UUID, ≥33 chars) for memory continuity; response includes `session_id` to reuse on /hospitals and /route |
 | `/triage/report/{id}` | GET | Fetch triage report |
 | `/triage/override/{id}` | PUT | Override AI recommendation |
-| `/hospitals/match` | POST | Get top 3 hospital matches |
+| `/hospitals/match` | POST | Get top 3 hospital matches; send same `session_id` as triage for AgentCore memory |
 | `/hospitals/{id}/status` | GET | Real-time hospital status |
 | `/routing/calculate` | POST | Get route to hospital |
 | `/routing/navigate/{id}` | GET | Turn-by-turn steps |

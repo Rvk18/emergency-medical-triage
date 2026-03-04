@@ -163,6 +163,40 @@
 
 ---
 
+## AC-2 Triage on AgentCore (Feb 2026)
+
+### Implemented
+- **Triage agent** (`agentcore/agent/triage_agent.py`): Strands agent with optional Eka tools (search_indian_medications_tool, search_treatment_protocols_tool) via Gateway; returns TriageResult-shaped JSON.
+- **Gateway client** (`agentcore/agent/gateway_client.py`): Added `search_medications_via_gateway`, `search_protocols_via_gateway` for Eka (eka-target___search_medications, eka-target___search_protocols).
+- **Triage Lambda** (`src/triage/core/agent.py`): When `USE_AGENTCORE_TRIAGE` and `TRIAGE_AGENT_RUNTIME_ARN` set, calls `InvokeAgentRuntime`; else Bedrock Agent or Converse. Logs `Triage source=agentcore|converse|bedrock_agent duration_ms=...` for observability.
+- **Terraform**: `use_agentcore_triage`, `triage_agent_runtime_arn`; IAM policy `agentcore_triage_invoke` for Triage Lambda; env `USE_AGENTCORE_TRIAGE`, `TRIAGE_AGENT_RUNTIME_ARN` on Triage Lambda.
+- **Observability**: [OBSERVABILITY.md](./OBSERVABILITY.md) – CloudWatch Logs Insights queries, trace review (request_id, aws_request_id).
+
+### Manual step
+Deploy the triage agent: `cd agentcore/agent && agentcore configure --entrypoint triage_agent.py --non-interactive && agentcore deploy`. Set `triage_agent_runtime_arn` in tfvars and `use_agentcore_triage=true`.
+
+---
+
+### Manual step
+Deploy the triage agent: `cd agentcore/agent && agentcore configure --entrypoint triage_agent.py --non-interactive && agentcore deploy`. Set `triage_agent_runtime_arn` in tfvars and `use_agentcore_triage=true`.
+
+---
+
+## AC-3 Memory + session/patient context (Feb 2026)
+
+### Implemented
+- **session_id / patient_id:** Optional on `TriageRequest` and `HospitalMatchRequest`. When calling AgentCore, `session_id` is used as `runtimeSessionId` (or generated if not provided). Same session_id across triage → hospitals → route keeps one runtime session and its short-term memory.
+- **Triage response:** Includes `session_id` (echoed or generated) so clients can send it to POST /hospitals and later POST /route.
+- **Hospital Matcher:** Accepts `session_id` and `patient_id`; passes `session_id` to `InvokeAgentRuntime` for memory continuity.
+- **Hospital MCP:** Hospital Matcher already uses Gateway MCP tool `get_hospitals` (Lambda target) when Gateway env is set; real data can be wired by changing the Lambda data source.
+
+### Usage (client)
+1. POST /triage with optional `session_id` (min 33 chars, e.g. UUID), `patient_id`. Response includes `session_id` (the one used for AgentCore; use it for next call).
+2. POST /hospitals with same `session_id` (min 33 chars) and optional `patient_id`, plus severity, recommendations, etc.
+3. (When AC-4 is done) POST /route with same `session_id`.
+
+---
+
 ## Next Steps (TODO)
 
 1. **AC-2** – Triage on AgentCore Runtime; full observability (traces, CloudWatch dashboards, medical audit); POST /triage invokes AgentCore; persist to Aurora unchanged.

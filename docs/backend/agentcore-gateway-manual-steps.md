@@ -47,25 +47,24 @@ The script will:
 2. Create MCP Gateway with Cognito auth
 3. Add the get_hospitals Lambda as a target with tool schema
 4. Add Lambda permission for the Gateway execution role
-5. Save `gateway_config.json` with `gateway_url`, `gateway_id`, `region`, `client_info`
+5. Save **full config (including client_info)** to **Secrets Manager** (`{prefix}/gateway-config`). Save only non-sensitive fields to `gateway_config.json` (no OAuth in code).
 
 ## Step 4: Use the Gateway
 
-- **MCP URL**: From `gateway_config.json` → `gateway_url`
-- **Tool name**: `get-hospitals-target___get_hospitals` (target name + `___` + tool name)
-- **Auth**: Use `client_info` (client_id, client_secret, token_endpoint, scope) for OAuth client-credentials flow
+- **MCP URL**: From Secrets Manager **gateway-config** secret → `gateway_url`, or from local `gateway_config.json` (non-sensitive only)
+- **Auth**: From Secrets Manager **gateway-config** → `client_info` (client_id, client_secret, token_endpoint, scope). Use `eval $(python scripts/load_gateway_config.py)` to export env vars.
 
 ### Step 4b: Wire Hospital Matcher agent to Gateway (optional)
 
-To have the agent use the Gateway instead of in-agent synthetic data, set these **environment variables on the AgentCore Runtime** (e.g. in AWS Console → Bedrock AgentCore → your runtime, or in your deployment config). Values come from `gateway_config.json` and `client_info`:
+To have the agent use the Gateway instead of in-agent synthetic data, set these **environment variables on the AgentCore Runtime** (e.g. in AWS Console → Bedrock AgentCore → your runtime). Values come from **Secrets Manager** (gateway-config secret). Easiest: run `eval $(python scripts/load_gateway_config.py)` locally, then copy the exported values into the runtime env in the Console:
 
-- `GATEWAY_MCP_URL` = `gateway_url` from config
-- `GATEWAY_CLIENT_ID` = `client_info.client_id` (if present)
+- `GATEWAY_MCP_URL` = `gateway_url` from secret
+- `GATEWAY_CLIENT_ID` = `client_info.client_id`
 - `GATEWAY_CLIENT_SECRET` = `client_info.client_secret`
 - `GATEWAY_TOKEN_ENDPOINT` = `client_info.token_endpoint`
 - `GATEWAY_SCOPE` = `client_info.scope` or `bedrock-agentcore-gateway`
 
-If `client_info` is null (e.g. reusing an existing Gateway), create a Cognito app client for the same user pool and use its id/secret. Then redeploy the agent: `cd agentcore/agent && agentcore deploy`.
+Do not store these in code; they are in Secrets Manager only. Local `gateway_config.json` contains only non-sensitive fields and a pointer to the secret.
 
 ### Step 4c: Wire Triage to Eka (optional)
 

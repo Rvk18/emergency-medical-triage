@@ -91,6 +91,7 @@ AI_Hackathon_Triage/
 | [design.md](docs/backend/design.md) | Architecture, components, data models |
 | [implementation-history.md](docs/backend/implementation-history.md) | Decisions, phases, fixes |
 | [secrets.md](docs/backend/secrets.md) | Terraform-created secrets, api_config keys, load script |
+| [OBSERVABILITY.md](docs/backend/OBSERVABILITY.md) | Triage/Hospital Matcher logs, CloudWatch Insights, trace review |
 | [agentcore-implementation-plan.md](docs/backend/agentcore-implementation-plan.md) | AgentCore phases (AC-1–AC-4) |
 | [RELEASE-Gateway-Eka-Integration.md](docs/backend/RELEASE-Gateway-Eka-Integration.md) | **AC-1 release:** Gateway + Eka wiring, config, quick test |
 | [TESTING-Gateway-Eka.md](docs/backend/TESTING-Gateway-Eka.md) | Unit, integration, and API testing for Gateway/Eka |

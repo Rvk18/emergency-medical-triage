@@ -14,9 +14,11 @@ Prerequisites:
 Usage:
   python scripts/setup_agentcore_gateway.py
   python scripts/setup_agentcore_gateway.py <lambda_arn> [--gateway-id <id>] [--eka <eka_arn>]
+  python scripts/setup_agentcore_gateway.py --save-to-secrets-only   # Migrate existing gateway_config.json (with client_info) to Secrets Manager only
 
   With no args, the script reads gateway_get_hospitals_lambda_arn and gateway_eka_lambda_arn
-  from the api_config secret ({prefix}/api-config). Override with env or arguments.
+  from the api_config secret ({prefix}/api-config). Full config (incl. OAuth) is saved to
+  Secrets Manager ({prefix}/gateway-config); only non-sensitive fields are written to gateway_config.json.
 """
 
 import json
@@ -181,7 +183,52 @@ def find_existing_gateway(control_client, name: str) -> dict | None:
     return None
 
 
+def _migrate_gateway_config_to_secrets() -> None:
+    """One-time: read gateway_config.json (if it has client_info), save to Secrets Manager, overwrite file with minimal."""
+    path = os.path.join(PROJECT_ROOT, "gateway_config.json")
+    if not os.path.isfile(path):
+        print("ERROR: gateway_config.json not found. Run setup_agentcore_gateway.py first.", file=sys.stderr)
+        sys.exit(1)
+    with open(path) as f:
+        config = json.load(f)
+    client_info = config.get("client_info")
+    if not client_info or not isinstance(client_info, dict):
+        print("ERROR: gateway_config.json has no client_info. Run full setup_agentcore_gateway.py.", file=sys.stderr)
+        sys.exit(1)
+    api_cfg = _load_api_config_from_secret()
+    secret_name = (
+        os.environ.get("GATEWAY_CONFIG_SECRET_NAME", "").strip()
+        or (api_cfg.get("gateway_config_secret_name") if api_cfg else None)
+        or f"{os.environ.get('NAME_PREFIX', 'emergency-medical-triage-dev')}/gateway-config"
+    )
+    try:
+        sm = boto3.client("secretsmanager", region_name=REGION)
+        sm.put_secret_value(SecretId=secret_name, SecretString=json.dumps(config, indent=2))
+        logger.info("Migrated gateway config to Secrets Manager: %s", secret_name)
+    except Exception as e:
+        print(f"ERROR: Could not save to Secrets Manager: {e}", file=sys.stderr)
+        sys.exit(1)
+    local_config = {
+        "gateway_url": config.get("gateway_url", ""),
+        "gateway_id": config.get("gateway_id", ""),
+        "region": config.get("region", REGION),
+        "target_name": config.get("target_name", "get-hospitals-target"),
+        "lambda_arn": config.get("lambda_arn", ""),
+        "client_info": "Stored in Secrets Manager; use scripts/load_gateway_config.py or AWS Console",
+    }
+    if config.get("eka_lambda_arn"):
+        local_config["eka_target_name"] = "eka-target"
+        local_config["eka_lambda_arn"] = config["eka_lambda_arn"]
+    with open(path, "w") as f:
+        json.dump(local_config, f, indent=2)
+    print("Migrated client_info to Secrets Manager and updated gateway_config.json (no secrets in file).")
+    print("Secret:", secret_name)
+
+
 def setup_gateway() -> dict:
+    if "--save-to-secrets-only" in sys.argv:
+        _migrate_gateway_config_to_secrets()
+        return {}
     lambda_arn, existing_gateway_id, eka_lambda_arn = parse_args()
     logger.info("Using Lambda ARN: %s", lambda_arn)
     if eka_lambda_arn:
@@ -223,7 +270,7 @@ def setup_gateway() -> dict:
             gateway = find_existing_gateway(control_client, GATEWAY_NAME)
             if not gateway:
                 raise RuntimeError(f"Gateway '{GATEWAY_NAME}' exists but could not be found. Use --gateway-id <id>.")
-            cognito_response["client_info"] = None  # Use existing auth; client_info from prior run
+            # Keep cognito_response["client_info"] from create_oauth_authorizer so config gets OAuth credentials
 
         # Fix IAM permissions (if toolkit created a role)
         try:
@@ -238,25 +285,31 @@ def setup_gateway() -> dict:
     target_name = "get-hospitals-target"
 
     logger.info("Adding Lambda target with get_hospitals tool...")
-    control_client.create_gateway_target(
-        gatewayIdentifier=gateway_id,
-        name=target_name,
-        description="get_hospitals tool for hospital recommendations",
-        targetConfiguration={
-            "mcp": {
-                "lambda": {
-                    "lambdaArn": lambda_arn,
-                    "toolSchema": {
-                        "inlinePayload": [GET_HOSPITALS_TOOL_SCHEMA],
-                    },
+    try:
+        control_client.create_gateway_target(
+            gatewayIdentifier=gateway_id,
+            name=target_name,
+            description="get_hospitals tool for hospital recommendations",
+            targetConfiguration={
+                "mcp": {
+                    "lambda": {
+                        "lambdaArn": lambda_arn,
+                        "toolSchema": {
+                            "inlinePayload": [GET_HOSPITALS_TOOL_SCHEMA],
+                        },
+                    }
                 }
-            }
-        },
-        credentialProviderConfigurations=[
-            {"credentialProviderType": "GATEWAY_IAM_ROLE"},
-        ],
-    )
-    logger.info("Lambda target added")
+            },
+            credentialProviderConfigurations=[
+                {"credentialProviderType": "GATEWAY_IAM_ROLE"},
+            ],
+        )
+        logger.info("Lambda target added")
+    except ClientError as e:
+        if e.response.get("Error", {}).get("Code") == "ConflictException":
+            logger.info("get_hospitals target already exists")
+        else:
+            raise
 
     # 3b. Optionally add Eka target (search_medications, search_protocols)
     if eka_lambda_arn:
@@ -285,8 +338,8 @@ def setup_gateway() -> dict:
             try:
                 gw_response = control_client.get_gateway(gatewayIdentifier=gateway_id)
                 role_arn = gw_response.get("gateway", {}).get("executionRoleArn")
-        if role_arn:
-            add_lambda_permission_for_gateway(eka_lambda_arn, role_arn, "Eka")
+                if role_arn:
+                    add_lambda_permission_for_gateway(eka_lambda_arn, role_arn, "Eka")
             except Exception as e:
                 logger.warning("Could not add Eka Lambda permission: %s", e)
         except ClientError as e:
@@ -307,7 +360,7 @@ def setup_gateway() -> dict:
     except Exception as e:
         logger.warning("Could not fetch Gateway role for Lambda permission: %s", e)
 
-    # 5. Save config
+    # 5. Save config: full config (including client_info) to Secrets Manager; minimal config to local file
     gateway_url = gateway.get("gatewayUrl") or gateway_url_from_id(gateway["gatewayId"])
     config = {
         "gateway_url": gateway_url,
@@ -321,11 +374,39 @@ def setup_gateway() -> dict:
         config["eka_target_name"] = "eka-target"
         config["eka_lambda_arn"] = eka_lambda_arn
 
+    # Write full config to Secrets Manager (no secrets in code)
+    api_cfg = _load_api_config_from_secret()
+    secret_name = (
+        os.environ.get("GATEWAY_CONFIG_SECRET_NAME", "").strip()
+        or (api_cfg.get("gateway_config_secret_name") if api_cfg else None)
+        or f"{os.environ.get('NAME_PREFIX', 'emergency-medical-triage-dev')}/gateway-config"
+    )
+    try:
+        sm = boto3.client("secretsmanager", region_name=REGION)
+        sm.put_secret_value(SecretId=secret_name, SecretString=json.dumps(config, indent=2))
+        logger.info("Gateway config (including client_info) saved to Secrets Manager: %s", secret_name)
+    except Exception as e:
+        logger.warning("Could not save to Secrets Manager %s: %s", secret_name, e)
+        logger.info("Run terraform apply to create the secret, then re-run this script.")
+
+    # Local file: non-sensitive only (client_info never in repo)
+    local_config = {
+        "gateway_url": config["gateway_url"],
+        "gateway_id": config["gateway_id"],
+        "region": config["region"],
+        "target_name": target_name,
+        "lambda_arn": config["lambda_arn"],
+        "client_info": "Stored in Secrets Manager; use scripts/load_gateway_config.py or AWS Console",
+    }
+    if eka_lambda_arn:
+        local_config["eka_target_name"] = "eka-target"
+        local_config["eka_lambda_arn"] = eka_lambda_arn
+
     output_path = os.path.join(PROJECT_ROOT, "gateway_config.json")
     with open(output_path, "w") as f:
-        json.dump(config, f, indent=2)
+        json.dump(local_config, f, indent=2)
 
-    logger.info("Configuration saved to %s", output_path)
+    logger.info("Configuration saved to %s (sensitive values in Secrets Manager only)", output_path)
     print("\n" + "=" * 60)
     print("Gateway setup complete!")
     print("Gateway URL:", config["gateway_url"])
@@ -333,7 +414,8 @@ def setup_gateway() -> dict:
     print(f"Tool name (MCP): {target_name}___get_hospitals")
     if eka_lambda_arn:
         print("Eka tools: eka-target___search_medications, eka-target___search_protocols")
-    print("Config saved to: gateway_config.json")
+    print("Full config (incl. OAuth) saved to Secrets Manager:", secret_name)
+    print("Local gateway_config.json has no secrets; use load_gateway_config.py to export env vars.")
     print("=" * 60)
 
     return config

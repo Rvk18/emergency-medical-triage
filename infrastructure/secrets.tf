@@ -74,15 +74,27 @@ resource "aws_secretsmanager_secret" "api_config" {
   }
 }
 
+# AgentCore Gateway OAuth and config. Secret is created by Terraform; value is populated by setup_agentcore_gateway.py (never store in code).
+resource "aws_secretsmanager_secret" "gateway_config" {
+  name        = "${local.name_prefix}/gateway-config"
+  description = "AgentCore Gateway config and OAuth (gateway_url, client_id, client_secret, token_endpoint). Populated by setup_agentcore_gateway.py."
+
+  tags = {
+    Name    = "${local.name_prefix}-gateway-config"
+    Project = var.project_name
+  }
+}
+
 resource "aws_secretsmanager_secret_version" "api_config" {
   secret_id = aws_secretsmanager_secret.api_config.id
   secret_string = jsonencode({
     api_gateway_url                  = "${aws_api_gateway_stage.main.invoke_url}/"
     api_gateway_health_url           = "${aws_api_gateway_stage.main.invoke_url}/health"
-    gateway_get_hospitals_lambda_arn = aws_lambda_function.gateway_get_hospitals.arn
+    gateway_get_hospitals_lambda_arn  = aws_lambda_function.gateway_get_hospitals.arn
     gateway_eka_lambda_arn           = aws_lambda_function.gateway_eka.arn
     region                           = var.aws_region
     api_config_secret_name           = aws_secretsmanager_secret.api_config.name
+    gateway_config_secret_name       = aws_secretsmanager_secret.gateway_config.name
     bedrock_config_secret_name       = aws_secretsmanager_secret.bedrock_config.name
     rds_config_secret_name           = aws_secretsmanager_secret.rds_config.name
     eka_config_secret_name           = one(aws_secretsmanager_secret.eka_config[*].name)

@@ -85,9 +85,11 @@ def _log_trace(source: str, start: float) -> None:
 
 
 def _match_via_agentcore(req: HospitalMatchRequest) -> HospitalMatchResult:
-    """Invoke AgentCore Runtime agent."""
+    """Invoke AgentCore Runtime agent. Uses req.session_id for memory continuity (AC-3)."""
     client = boto3.client("bedrock-agentcore", region_name=REGION)
-    session_id = str(uuid.uuid4())
+    # AgentCore requires runtimeSessionId length >= 33 (e.g. UUID); use client's if valid else generate
+    raw_session = req.session_id or ""
+    session_id = raw_session if len(raw_session) >= 33 else str(uuid.uuid4())
     payload = {
         "severity": req.severity,
         "recommendations": req.recommendations,
@@ -98,6 +100,8 @@ def _match_via_agentcore(req: HospitalMatchRequest) -> HospitalMatchResult:
     if req.patient_location_lat is not None and req.patient_location_lon is not None:
         payload["patient_location_lat"] = req.patient_location_lat
         payload["patient_location_lon"] = req.patient_location_lon
+    if req.patient_id:
+        payload["patient_id"] = req.patient_id
 
     try:
         response = client.invoke_agent_runtime(

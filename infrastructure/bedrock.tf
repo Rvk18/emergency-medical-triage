@@ -49,8 +49,32 @@ resource "aws_iam_policy" "agentcore_invoke" {
   })
 }
 
+# AC-2: Triage AgentCore Runtime (separate ARN)
+resource "aws_iam_policy" "agentcore_triage_invoke" {
+  count       = var.use_agentcore_triage && var.triage_agent_runtime_arn != "" ? 1 : 0
+  name        = "${local.name_prefix}-agentcore-triage-invoke"
+  description = "Allow invoking AgentCore Runtime for Triage"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = ["bedrock-agentcore:InvokeAgentRuntime"]
+        Resource = ["${var.triage_agent_runtime_arn}", "${var.triage_agent_runtime_arn}/*"]
+      }
+    ]
+  })
+}
+
 resource "aws_iam_role_policy_attachment" "hospital_matcher_agentcore" {
   count      = var.use_agentcore && var.agent_runtime_arn != "" ? 1 : 0
   role       = aws_iam_role.hospital_matcher_lambda.name
   policy_arn = aws_iam_policy.agentcore_invoke[0].arn
+}
+
+resource "aws_iam_role_policy_attachment" "triage_agentcore" {
+  count      = var.use_agentcore_triage && var.triage_agent_runtime_arn != "" ? 1 : 0
+  role       = aws_iam_role.triage_lambda.name
+  policy_arn = aws_iam_policy.agentcore_triage_invoke[0].arn
 }

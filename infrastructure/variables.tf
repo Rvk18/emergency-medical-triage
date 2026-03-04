@@ -92,6 +92,19 @@ variable "agent_runtime_arn" {
   default     = ""
 }
 
+# AC-2: Triage on AgentCore (separate runtime from Hospital Matcher)
+variable "use_agentcore_triage" {
+  description = "Use AgentCore Runtime for Triage (requires triage_agent_runtime_arn)"
+  type        = bool
+  default     = false
+}
+
+variable "triage_agent_runtime_arn" {
+  description = "AgentCore Runtime ARN for Triage agent (from agentcore deploy --entrypoint triage_agent.py)"
+  type        = string
+  default     = ""
+}
+
 # Eka Care API (for Eka MCP - Indian drugs, treatment protocols)
 variable "eka_api_key" {
   description = "Eka Care API key (from console.eka.care). Stored in Secrets Manager."

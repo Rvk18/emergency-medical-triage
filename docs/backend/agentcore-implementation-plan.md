@@ -104,28 +104,29 @@
 
 ---
 
-### Phase AC-2: Triage + Observability
+### Phase AC-2: Triage + Observability — In progress
 
 **Goal:** Migrate Triage to AgentCore; enable full trace observability.
 
 **Deliverables:**
-- [ ] Triage agent on AgentCore Runtime
-- [ ] AgentCore Observability: tracing, CloudWatch dashboards
-- [ ] Trace review workflow for Admin/Dev (medical audit)
-- [ ] POST /triage invokes AgentCore
-- [ ] Persist triage to Aurora (unchanged)
+- [x] Triage agent on AgentCore Runtime (`agentcore/agent/triage_agent.py`; optional Eka via Gateway)
+- [x] AgentCore Observability: tracing (Triage/HospitalMatcher `source=` and `duration_ms=` in CloudWatch Logs)
+- [x] Trace review workflow for Admin/Dev (see [OBSERVABILITY.md](./OBSERVABILITY.md) – Logs Insights, request_id audit)
+- [x] POST /triage invokes AgentCore when `USE_AGENTCORE_TRIAGE=true` and `TRIAGE_AGENT_RUNTIME_ARN` set
+- [x] Persist triage to Aurora (unchanged)
 
 ---
 
-### Phase AC-3: Memory + Hospital MCP
+### Phase AC-3: Memory + Hospital MCP — In progress
 
 **Goal:** Add Memory for patient context; integrate Hospital Data MCP via Gateway.
 
 **Deliverables:**
-- [ ] AgentCore Memory: short-term (session) + long-term (patient)
-- [ ] Gateway: Hospital Data MCP as tool source
-- [ ] Hospital Matcher uses real hospital data (replace stubs)
-- [ ] Patient context available across triage → hospital → routing flow
+- [x] **Session/patient context:** Optional `session_id` and `patient_id` on POST /triage and POST /hospitals. When provided, used as AgentCore `runtimeSessionId` so the same runtime session (and its short-term memory) is reused across triage → hospital → routing. Triage response includes `session_id` (echo or generated) for clients to send to /hospitals and /route.
+- [x] **AgentCore Memory (STM):** Already enabled on runtimes deployed with `agentcore deploy` (STM-only). Reusing `session_id` keeps context within a flow.
+- [ ] **Long-term memory (LTM):** Optional; enable via Bedrock AgentCore memory strategies (e.g. summary) and use `patient_id` for namespacing. Document in runbook.
+- [x] **Gateway / Hospital MCP:** Hospital Matcher uses Gateway MCP tool `get_hospitals` (Lambda target); when Gateway env is set, replaces in-agent synthetic data. Real hospital data can be wired by updating the Lambda data source (S3, API) without agent change.
+- [ ] **Patient context across flow:** Frontend sends same `session_id` (and optionally `patient_id`) to triage, then hospitals, then route; backend passes through to AgentCore.
 
 ---
 
@@ -155,8 +156,8 @@
 | Phase | Focus | Status | Dependency |
 |-------|-------|--------|------------|
 | AC-1 | Runtime + Gateway + Hospital Matcher + Eka (A,B,C) | ✅ Done | None |
-| **AC-2** | Triage on AgentCore + Observability | **Next** | AC-1 |
-| **AC-3** | Memory + Hospital MCP | Pending | AC-1, AC-2 |
+| **AC-2** | Triage on AgentCore + Observability | **In progress** | AC-1 |
+| **AC-3** | Memory + Hospital MCP | **In progress** | AC-1, AC-2 |
 | **AC-4** | Routing + Identity | Pending | AC-1 |
 
 ---

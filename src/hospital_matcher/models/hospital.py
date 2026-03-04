@@ -23,6 +23,8 @@ class HospitalMatchRequest(BaseModel):
     patient_location_lat: float | None = None
     patient_location_lon: float | None = None
     limit: int = Field(default=3, ge=1, le=10)
+    session_id: str | None = Field(default=None, description="Optional: same as triage session_id for AgentCore memory continuity")
+    patient_id: str | None = Field(default=None, description="Optional: patient identifier for memory")
 
 
 class HospitalMatchResult(BaseModel):

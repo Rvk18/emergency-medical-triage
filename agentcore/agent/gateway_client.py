@@ -113,3 +113,37 @@ def get_hospitals_via_gateway(severity: str, limit: int = 3) -> dict[str, Any]:
         GET_HOSPITALS_TOOL_NAME,
         {"severity": severity, "limit": limit},
     )
+
+
+# Eka tools (for Triage agent; same Gateway, eka-target)
+EKA_SEARCH_MEDICATIONS = "eka-target___search_medications"
+EKA_SEARCH_PROTOCOLS = "eka-target___search_protocols"
+
+
+def search_medications_via_gateway(
+    drug_name: str | None = None,
+    form: str | None = None,
+    generic_names: str | None = None,
+) -> dict[str, Any]:
+    """Call Gateway Eka search_medications. Returns {medications: [...]} or stub."""
+    args = {}
+    if drug_name:
+        args["drug_name"] = drug_name
+    if form:
+        args["form"] = form
+    if generic_names:
+        args["generic_names"] = generic_names
+    try:
+        return call_gateway_tool(EKA_SEARCH_MEDICATIONS, args)
+    except Exception as e:
+        logger.warning("Eka search_medications failed: %s", e)
+        return {"medications": [], "error": str(e)}
+
+
+def search_protocols_via_gateway(queries: list[dict] | None = None) -> dict[str, Any]:
+    """Call Gateway Eka search_protocols. Returns {protocols: [...]} or stub."""
+    try:
+        return call_gateway_tool(EKA_SEARCH_PROTOCOLS, {"queries": queries or []})
+    except Exception as e:
+        logger.warning("Eka search_protocols failed: %s", e)
+        return {"protocols": [], "error": str(e)}

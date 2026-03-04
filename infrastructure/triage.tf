@@ -115,10 +115,12 @@ resource "aws_lambda_function" "triage" {
 
   environment {
     variables = {
-      BEDROCK_AGENT_ID       = var.bedrock_agent_id
-      BEDROCK_AGENT_ALIAS_ID = var.bedrock_agent_alias_id
-      BEDROCK_MODEL_ID       = var.bedrock_model_id
-      RDS_CONFIG_SECRET      = aws_secretsmanager_secret.rds_config.name
+      BEDROCK_AGENT_ID            = var.bedrock_agent_id
+      BEDROCK_AGENT_ALIAS_ID      = var.bedrock_agent_alias_id
+      BEDROCK_MODEL_ID            = var.bedrock_model_id
+      RDS_CONFIG_SECRET           = aws_secretsmanager_secret.rds_config.name
+      USE_AGENTCORE_TRIAGE        = tostring(var.use_agentcore_triage)
+      TRIAGE_AGENT_RUNTIME_ARN    = var.triage_agent_runtime_arn
     }
   }
 }
