@@ -5,6 +5,8 @@ resource "null_resource" "build_triage_lambda" {
     src_models = filesha256("${path.module}/../src/triage/models/triage.py")
     src_db     = filesha256("${path.module}/../src/triage/core/db.py")
     src_agent  = filesha256("${path.module}/../src/triage/core/agent.py")
+    src_tools  = filesha256("${path.module}/../src/triage/core/tools.py")
+    src_gw     = filesha256("${path.module}/../src/triage/core/gateway_client.py")
     script     = filesha256("${path.module}/../scripts/build_triage_lambda.sh")
   }
   provisioner "local-exec" {
@@ -113,10 +115,12 @@ resource "aws_lambda_function" "triage" {
 
   environment {
     variables = {
-      BEDROCK_AGENT_ID       = var.bedrock_agent_id
-      BEDROCK_AGENT_ALIAS_ID = var.bedrock_agent_alias_id
-      BEDROCK_MODEL_ID       = var.bedrock_model_id
-      RDS_CONFIG_SECRET      = aws_secretsmanager_secret.rds_config.name
+      BEDROCK_AGENT_ID            = var.bedrock_agent_id
+      BEDROCK_AGENT_ALIAS_ID      = var.bedrock_agent_alias_id
+      BEDROCK_MODEL_ID            = var.bedrock_model_id
+      RDS_CONFIG_SECRET           = aws_secretsmanager_secret.rds_config.name
+      USE_AGENTCORE_TRIAGE        = tostring(var.use_agentcore_triage)
+      TRIAGE_AGENT_RUNTIME_ARN    = var.triage_agent_runtime_arn
     }
   }
 }

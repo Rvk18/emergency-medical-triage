@@ -6,10 +6,12 @@ Terraform configuration for Emergency Medical Triage AWS resources.
 
 | Resource | Description |
 |----------|-------------|
-| **S3** | Bucket with versioning and encryption for backups, audit logs, media |
-| **RDS Aurora** | PostgreSQL 15.10, Serverless v2, in private subnets |
-| **Bedrock** | IAM policy for invoking foundation models (enable model access in Console) |
-| **API Gateway** | REST API with `/triage` and `/health` endpoints |
+| **S3** | Bucket with versioning and encryption |
+| **RDS Aurora** | PostgreSQL 15, Serverless v2, private subnets, IAM auth |
+| **Bedrock** | IAM for Converse API and AgentCore InvokeAgentRuntime |
+| **API Gateway** | REST API: `/triage`, `/hospitals`, `/health` |
+| **Lambdas** | Triage, Hospital Matcher, Gateway get_hospitals, Gateway Eka (optional) |
+| **AgentCore Gateway** | Created by `scripts/setup_agentcore_gateway.py` (not Terraform); MCP tools: get_hospitals, Eka search_medications/search_protocols |
 
 ## Prerequisites
 
@@ -37,9 +39,11 @@ Terraform configuration for Emergency Medical Triage AWS resources.
 
 ## Outputs
 
-After apply, you'll get:
+After apply:
 
-- `s3_bucket_name` / `s3_bucket_arn`
-- `aurora_cluster_endpoint` / `aurora_cluster_reader_endpoint`
-- `bedrock_policy_arn` (attach to Lambda/app role)
-- `api_gateway_url` / `api_gateway_health_url`
+- **API:** `api_gateway_url`, `api_gateway_health_url`
+- **Secrets:** `api_config_secret_name` – use this to read API URL and Gateway Lambda ARNs (no Terraform output needed). Use `scripts/load_api_config.py` (boto3).
+- **Lambdas:** `gateway_get_hospitals_lambda_arn`, `gateway_eka_lambda_arn` (also stored in api_config secret)
+- **Aurora:** `aurora_cluster_endpoint`, `aurora_cluster_reader_endpoint`
+- **S3:** `s3_bucket_name`, `s3_bucket_arn`
+- **Secrets:** `eka_config_secret_name` (when `eka_api_key` set; sensitive)

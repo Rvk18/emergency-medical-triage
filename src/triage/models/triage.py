@@ -15,6 +15,8 @@ class TriageRequest(BaseModel):
     age_years: int | None = Field(default=None, ge=0, le=150)
     sex: str | None = None
     submitted_by: str | None = Field(default=None, description="RMP ID or user identifier")
+    session_id: str | None = Field(default=None, description="Optional: reuse AgentCore session for memory (triage → hospital → routing)")
+    patient_id: str | None = Field(default=None, description="Optional: patient identifier for long-term memory")
 
 
 class TriageResult(BaseModel):
@@ -38,4 +40,8 @@ class TriageResult(BaseModel):
     safety_disclaimer: str | None = Field(
         default=None,
         description="Required disclaimer for AI-generated medical guidance.",
+    )
+    session_id: str | None = Field(
+        default=None,
+        description="Session ID used for AgentCore (echo or generated); use for /hospitals and /route.",
     )

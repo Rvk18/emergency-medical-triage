@@ -122,8 +122,83 @@
 
 ---
 
-## Next Steps
+## AgentCore Gateway get_hospitals (Mar 2026)
 
-1. Create Bedrock Agent in Console for Hospital Matcher; set `bedrock_hospital_matcher_agent_id` in tfvars
-2. Routing Agent + POST /route
-3. Phase 3 (multi-model consensus) in parallel
+### Implemented
+- **Lambda** (`infrastructure/gateway_get_hospitals_lambda_src/lambda_handler.py`): AgentCore Gateway target implementing `get_hospitals` tool. Event has `severity`, `limit`; context has `bedrockAgentCoreToolName` (strip `TARGET___` prefix). Returns synthetic Indian hospital data (same structure as `agentcore/agent/synthetic_hospitals.py`).
+- **Terraform** (`infrastructure/gateway_get_hospitals.tf`): Creates Lambda + IAM role. Outputs `gateway_get_hospitals_lambda_arn` for setup script.
+- **Setup script** (`scripts/setup_agentcore_gateway.py`): Uses `bedrock_agentcore_starter_toolkit` GatewayClient to create MCP Gateway with Cognito OAuth, adds Lambda target with get_hospitals tool schema, saves `gateway_config.json`.
+- **Docs** (`docs/backend/agentcore-gateway-manual-steps.md`): Manual steps for Gateway setup (Terraform creates Lambda; script creates Gateway).
+
+### Flow
+1. `terraform apply` → Lambda created
+2. `python scripts/setup_agentcore_gateway.py <lambda_arn>` → Gateway + target + gateway_config.json
+3. Agents use Gateway MCP URL with OAuth token; tool name `{target_name}___get_hospitals`
+
+---
+
+## Cleanup: Bedrock Agent Removed (AgentCore Migration)
+
+- **Removed:** Classic Bedrock Agent Terraform (`bedrock_agent_hospital_matcher.tf`) – PrepareAgent/version detection was unreliable.
+- **Hospital Matcher:** Uses Converse API (fallback) when `BEDROCK_HOSPITAL_MATCHER_AGENT_ID` empty.
+- **Decision:** Migrate to **Bedrock AgentCore** – see [agentcore-implementation-plan.md](./agentcore-implementation-plan.md).
+
+---
+
+## AgentCore AC-1 Complete (Mar 2026)
+
+### Implemented
+- **Hospital Matcher** on AgentCore Runtime (Strands + synthetic tool)
+- **Lambda** calls `InvokeAgentRuntime` when `use_agentcore=true`
+- **Eka config** in Secrets Manager (`eka_api_key` variable → `{project}/eka-config`)
+- **Gateway setup script** fixes: target name `get-hospitals-target` (no underscores), ConflictException handling for re-runs, `--gateway-id` for existing gateways
+
+### Gateway Status
+- MCP Gateway created, `get_hospitals` Lambda target added
+- **A (done):** Hospital Matcher agent uses Gateway when GATEWAY_* env vars set on Runtime (`agentcore/agent/gateway_client.py`, fallback to synthetic)
+- **B (done):** Eka Lambda target (`gateway_eka.tf`, `gateway_eka_lambda_src/`); setup script `--eka <arn>`; tools `eka-target___search_medications`, `eka-target___search_protocols`
+- **C (done):** Triage Converse flow uses Eka when GATEWAY_* set on Triage Lambda (`triage/core/gateway_client.py`, `get_triage_tool_config_with_eka`, multi-round tool loop in `agent.py`)
+- **Config:** Terraform creates **api_config** secret (keys: `api_gateway_url`, `api_gateway_health_url`, `gateway_get_hospitals_lambda_arn`, `gateway_eka_lambda_arn`, etc.). Load script: `scripts/load_api_config.py` (boto3); usage: `eval $(python scripts/load_api_config.py --exports)` or `--url`. Single **requirements.txt** at repo root.
+- `gateway_config.json` with gateway_url, gateway_id (gitignored)
+
+---
+
+## AC-2 Triage on AgentCore (Feb 2026)
+
+### Implemented
+- **Triage agent** (`agentcore/agent/triage_agent.py`): Strands agent with optional Eka tools (search_indian_medications_tool, search_treatment_protocols_tool) via Gateway; returns TriageResult-shaped JSON.
+- **Gateway client** (`agentcore/agent/gateway_client.py`): Added `search_medications_via_gateway`, `search_protocols_via_gateway` for Eka (eka-target___search_medications, eka-target___search_protocols).
+- **Triage Lambda** (`src/triage/core/agent.py`): When `USE_AGENTCORE_TRIAGE` and `TRIAGE_AGENT_RUNTIME_ARN` set, calls `InvokeAgentRuntime`; else Bedrock Agent or Converse. Logs `Triage source=agentcore|converse|bedrock_agent duration_ms=...` for observability.
+- **Terraform**: `use_agentcore_triage`, `triage_agent_runtime_arn`; IAM policy `agentcore_triage_invoke` for Triage Lambda; env `USE_AGENTCORE_TRIAGE`, `TRIAGE_AGENT_RUNTIME_ARN` on Triage Lambda.
+- **Observability**: [OBSERVABILITY.md](./OBSERVABILITY.md) – CloudWatch Logs Insights queries, trace review (request_id, aws_request_id).
+
+### Manual step
+Deploy the triage agent: `cd agentcore/agent && agentcore configure --entrypoint triage_agent.py --non-interactive && agentcore deploy`. Set `triage_agent_runtime_arn` in tfvars and `use_agentcore_triage=true`.
+
+---
+
+### Manual step
+Deploy the triage agent: `cd agentcore/agent && agentcore configure --entrypoint triage_agent.py --non-interactive && agentcore deploy`. Set `triage_agent_runtime_arn` in tfvars and `use_agentcore_triage=true`.
+
+---
+
+## AC-3 Memory + session/patient context (Feb 2026)
+
+### Implemented
+- **session_id / patient_id:** Optional on `TriageRequest` and `HospitalMatchRequest`. When calling AgentCore, `session_id` is used as `runtimeSessionId` (or generated if not provided). Same session_id across triage → hospitals → route keeps one runtime session and its short-term memory.
+- **Triage response:** Includes `session_id` (echoed or generated) so clients can send it to POST /hospitals and later POST /route.
+- **Hospital Matcher:** Accepts `session_id` and `patient_id`; passes `session_id` to `InvokeAgentRuntime` for memory continuity.
+- **Hospital MCP:** Hospital Matcher already uses Gateway MCP tool `get_hospitals` (Lambda target) when Gateway env is set; real data can be wired by changing the Lambda data source.
+
+### Usage (client)
+1. POST /triage with optional `session_id` (min 33 chars, e.g. UUID), `patient_id`. Response includes `session_id` (the one used for AgentCore; use it for next call).
+2. POST /hospitals with same `session_id` (min 33 chars) and optional `patient_id`, plus severity, recommendations, etc.
+3. (When AC-4 is done) POST /route with same `session_id`.
+
+---
+
+## Next Steps (TODO)
+
+1. **AC-2** – Triage on AgentCore Runtime; full observability (traces, CloudWatch dashboards, medical audit); POST /triage invokes AgentCore; persist to Aurora unchanged.
+2. **AC-3** – AgentCore Memory (short/long-term); Hospital Matcher uses Gateway/MCP tools; patient context across triage → hospital → routing.
+3. **AC-4** – Routing agent on AgentCore Runtime; POST /route; AgentCore Identity (Cognito/IdP for RMP); Policy (if GA).

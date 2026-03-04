@@ -43,6 +43,12 @@ output "rds_config_secret_name" {
   value       = aws_secretsmanager_secret.rds_config.name
 }
 
+output "eka_config_secret_name" {
+  description = "Secrets Manager secret name for Eka Care API config"
+  value       = var.eka_api_key != "" ? aws_secretsmanager_secret.eka_config[0].name : null
+  sensitive   = true
+}
+
 output "bastion_public_ip" {
   description = "Bastion public IP for SSH tunnel (when enable_bastion=true)"
   value       = var.enable_bastion ? aws_instance.bastion[0].public_ip : null
@@ -51,4 +57,9 @@ output "bastion_public_ip" {
 output "api_gateway_health_url" {
   description = "API Gateway health check URL"
   value       = "${aws_api_gateway_stage.main.invoke_url}/health"
+}
+
+output "api_config_secret_name" {
+  description = "Secrets Manager secret name for API config (api_gateway_url, gateway Lambda ARNs). Use this to read config without Terraform outputs."
+  value       = aws_secretsmanager_secret.api_config.name
 }

@@ -1,0 +1,2 @@
+# Use project root requirements (single source of truth)
+-r ../../requirements.txt

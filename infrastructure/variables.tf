@@ -66,7 +66,7 @@ variable "bedrock_model_id" {
   default     = "us.anthropic.claude-3-5-sonnet-v2:0"
 }
 
-# Hospital Matcher Bedrock Agent (leave empty to use Converse API)
+# Hospital Matcher (leave empty to use Converse API; migrating to AgentCore)
 variable "bedrock_hospital_matcher_agent_id" {
   description = "Bedrock Agent ID for Hospital Matcher (empty = use Converse API)"
   type        = string
@@ -77,4 +77,38 @@ variable "bedrock_hospital_matcher_agent_alias_id" {
   description = "Bedrock Agent Alias ID for Hospital Matcher"
   type        = string
   default     = "TSTALIASID"
+}
+
+# AgentCore (when use_agentcore=true, Hospital Matcher uses AgentCore Runtime)
+variable "use_agentcore" {
+  description = "Use AgentCore Runtime for Hospital Matcher (requires agent_runtime_arn)"
+  type        = bool
+  default     = false
+}
+
+variable "agent_runtime_arn" {
+  description = "AgentCore Runtime ARN for Hospital Matcher (from agentcore deploy)"
+  type        = string
+  default     = ""
+}
+
+# AC-2: Triage on AgentCore (separate runtime from Hospital Matcher)
+variable "use_agentcore_triage" {
+  description = "Use AgentCore Runtime for Triage (requires triage_agent_runtime_arn)"
+  type        = bool
+  default     = false
+}
+
+variable "triage_agent_runtime_arn" {
+  description = "AgentCore Runtime ARN for Triage agent (from agentcore deploy --entrypoint triage_agent.py)"
+  type        = string
+  default     = ""
+}
+
+# Eka Care API (for Eka MCP - Indian drugs, treatment protocols)
+variable "eka_api_key" {
+  description = "Eka Care API key (from console.eka.care). Stored in Secrets Manager."
+  type        = string
+  default     = ""
+  sensitive   = true
 }

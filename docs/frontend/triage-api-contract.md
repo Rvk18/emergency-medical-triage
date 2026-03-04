@@ -28,6 +28,9 @@ This doc matches the backend implementation and what the mobile app must send/re
 | `vitals`    | `object`       | No       | Key-value map of vital names to numbers. Backend accepts any `dict[str, float]`. Use same keys the AI expects, e.g. `bp` (systolic), `heart_rate`, `spo2`, `temp_c`, `respiratory_rate`, etc. |
 | `age_years` | `number` (int) | No       | 0–150. Map from app’s `PatientInfo.age`. |
 | `sex`       | `string`       | No       | Map from app’s `PatientInfo.gender`. |
+| `submitted_by` | `string`    | No       | RMP or user identifier. |
+| `session_id`   | `string`    | No       | **AC-3:** Reuse same AgentCore session across triage → hospitals → route. Must be **≥ 33 characters** (e.g. UUID). If omitted or shorter, backend generates a UUID and returns it — use that for subsequent calls. |
+| `patient_id`    | `string`    | No       | Optional patient identifier for long-term memory. |
 
 **Example (matches your curl):**
 
@@ -69,6 +72,8 @@ This doc matches the backend implementation and what the mobile app must send/re
 | `recommendations`     | `string[]`| List of action items. |
 | `force_high_priority` | `boolean` | `true` when confidence < 85%; treat as high priority. |
 | `safety_disclaimer`   | `string \| null` | Single disclaimer text. |
+| `session_id`         | `string \| null` | **AC-3:** Session ID used for this request (echoed or backend-generated). **Store this and send it with POST /hospitals and POST /route** so the backend reuses the same AgentCore session (memory continuity). |
+| `id`                 | `string` (UUID) | Present when triage was persisted to DB; use for audit or follow-up. |
 
 **Example (from your curl):**
 
@@ -102,3 +107,66 @@ This doc matches the backend implementation and what the mobile app must send/re
 - **Input:** `symptoms` (required, ≥1), `vitals` (optional dict), optional `age_years`, `sex`.
 - **Output:** `severity`, `confidence`, `recommendations`, `force_high_priority`, `safety_disclaimer`.
 - When integrating the real API in the app, map `SymptomInput`/`VitalsInput`/`PatientInfo` → request JSON, and response JSON → `TriageResult` (with `emergencyId` generated or from a future backend field).
+
+---
+
+## Tracking session_id from the frontend (AC-3)
+
+To keep **one AgentCore session** (and short-term memory) across **triage → hospital match → route**, the frontend must send the same `session_id` on each API call. Backend requires `session_id` to be **at least 33 characters** (e.g. a UUID).
+
+### Option A: Frontend generates UUID at flow start (recommended)
+
+1. When the user starts a new case (e.g. "New assessment" or after opening the triage form), generate a UUID in the frontend:
+   - **Web:** `crypto.randomUUID()` (or `uuid` lib).
+   - **Android:** `UUID.randomUUID().toString()`.
+   - **iOS:** `UUID().uuidString`.
+2. Store it for the duration of the flow:
+   - **In-memory:** React state, Vue ref, or a “flow”/“case” context that holds `sessionId`, triage result, selected hospital, etc.
+   - **Optional:** `sessionStorage.setItem('triageSessionId', sessionId)` so it survives refresh in the same tab; clear when the flow ends or on logout.
+3. Send it on every call:
+   - **POST /triage** body: `{ "symptoms": [...], "session_id": "<your-uuid>" }`.
+   - **POST /hospitals** body: `{ "severity": "...", "recommendations": [...], "session_id": "<same-uuid>" }`.
+   - **POST /route** (when AC-4 exists): same `session_id`.
+
+### Option B: Use the session_id returned by triage
+
+1. First **POST /triage** without `session_id` (or with a short id). Backend returns `session_id` in the response (a UUID).
+2. Store that value (state or sessionStorage) and send it on **POST /hospitals** and **POST /route**.
+
+### Where to store
+
+| Place | Use when |
+|-------|----------|
+| **Component/context state** | One “flow” object (e.g. `{ sessionId, triageResult, hospitalMatch }`) for the current case. Cleared when user leaves the flow or starts a new case. |
+| **sessionStorage** | Same as above, but survives page refresh in the same tab. Key e.g. `triageSessionId` or `currentCaseSessionId`. Clear on flow end. |
+| **localStorage** | Only if you need to correlate across browser sessions (e.g. “resume case” next day); otherwise prefer sessionStorage or in-memory. |
+
+Do **not** put the session UUID in the URL (it would leak in history/logs). Prefer state or sessionStorage.
+
+### Example (pseudo-code)
+
+```javascript
+// Start of flow (e.g. "New assessment" or triage screen mount)
+const sessionId = crypto.randomUUID();  // 36 chars, valid
+setFlowState(prev => ({ ...prev, sessionId }));
+
+// POST /triage
+const triageRes = await fetch(`${API_URL}/triage`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ symptoms, vitals, age_years, sex, session_id: sessionId }),
+});
+const triage = await triageRes.json();
+// triage.session_id will equal sessionId (or backend UUID if you had sent a short one)
+
+// POST /hospitals (reuse same sessionId)
+const hospitalsRes = await fetch(`${API_URL}/hospitals`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    severity: triage.severity,
+    recommendations: triage.recommendations,
+    session_id: sessionId,
+  }),
+});
+```

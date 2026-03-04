@@ -45,12 +45,19 @@ AI_Hackathon_Triage/
 ├── pyproject.toml
 ├── requirements.txt
 ├── src/
-│   └── triage/           # Main Python package
-│       ├── api/          # Lambda handlers, API layer
-│       ├── core/         # Triage logic, Bedrock integration
-│       └── models/       # Data models and schemas
-├── infrastructure/       # Terraform (S3, Aurora, API Gateway, Lambda, Bedrock)
-├── scripts/              # CLI and one-off scripts
+│   ├── triage/           # Triage Lambda: Converse API, optional Eka via Gateway
+│   │   ├── api/          # Lambda handlers
+│   │   ├── core/         # Agent, tools, gateway_client (Eka)
+│   │   └── models/
+│   └── hospital_matcher/ # Hospital Matcher Lambda: AgentCore or Converse
+│       ├── api/
+│       ├── core/
+│       └── models/
+├── agentcore/            # AgentCore Runtime agents (Hospital Matcher)
+│   └── agent/            # Strands + Gateway client, synthetic_hospitals
+├── infrastructure/       # Terraform: Lambda, API Gateway, Aurora, Gateway Lambdas
+├── scripts/              # Build, Gateway setup (setup_agentcore_gateway.py)
+├── docs/backend/         # Design, implementation plan, release & testing docs
 └── tests/
 ```
 
@@ -68,24 +75,34 @@ AI_Hackathon_Triage/
    ```bash
    cd infrastructure
    cp terraform.tfvars.example terraform.tfvars   # Edit db_username, db_password
-   cp secrets.env.example secrets.env            # Add AWS credentials
    terraform init && terraform apply
-   ./verify-resources.sh
+   ```
+   After apply, API URL and Gateway Lambda ARNs are in Secrets Manager (**api_config**). Terraform creates this secret on apply; it does not exist before. See [docs/backend/secrets.md](docs/backend/secrets.md). To load into the shell:
+   ```bash
+   eval $(python scripts/load_api_config.py --exports)   # sets API_URL, GATEWAY_*_LAMBDA_ARN
+   curl -s "${API_URL}health"
    ```
 
 ## Documentation
 
 | Document | Description |
 |----------|-------------|
-| [requirements.md](../docs/backend/requirements.md) | User stories, acceptance criteria, and glossary |
-| [design.md](../docs/backend/design.md) | Architecture, components, data models, error handling, testing strategy |
+| [requirements.md](docs/backend/requirements.md) | User stories, acceptance criteria, glossary |
+| [design.md](docs/backend/design.md) | Architecture, components, data models |
+| [implementation-history.md](docs/backend/implementation-history.md) | Decisions, phases, fixes |
+| [secrets.md](docs/backend/secrets.md) | Terraform-created secrets, api_config keys, load script |
+| [OBSERVABILITY.md](docs/backend/OBSERVABILITY.md) | Triage/Hospital Matcher logs, CloudWatch Insights, trace review |
+| [agentcore-implementation-plan.md](docs/backend/agentcore-implementation-plan.md) | AgentCore phases (AC-1–AC-4) |
+| [RELEASE-Gateway-Eka-Integration.md](docs/backend/RELEASE-Gateway-Eka-Integration.md) | **AC-1 release:** Gateway + Eka wiring, config, quick test |
+| [TESTING-Gateway-Eka.md](docs/backend/TESTING-Gateway-Eka.md) | Unit, integration, and API testing for Gateway/Eka |
+| [agentcore-gateway-manual-steps.md](docs/backend/agentcore-gateway-manual-steps.md) | Gateway setup script and env vars |
+| [TODO.md](docs/backend/TODO.md) | Backend TODO (Gateway done; AC-2–AC-4 next) |
 
 ## Tech Stack
 
-- **AI:** Amazon Bedrock (foundation models), Kiro Platform  
-- **Backend:** AWS Lambda, Amazon DynamoDB, Amazon S3  
-- **Integration:** Model Context Protocol (MCP) servers  
-- **External:** 108 emergency services, hospital systems, mapping/routing APIs  
+- **AI:** Amazon Bedrock (Converse API, foundation models), **Bedrock AgentCore** (Runtime, Gateway, optional Eka for triage)
+- **Backend:** AWS Lambda, Aurora PostgreSQL, API Gateway, S3
+- **Integration:** AgentCore Gateway (MCP tools: get_hospitals, Eka search_medications / search_protocols)
 
 ## Requirements Summary
 

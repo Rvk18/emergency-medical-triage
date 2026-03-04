@@ -10,3 +10,5 @@ secrets.env
 lambda_health.zip
 triage_lambda.zip
 triage_lambda_src/
+gateway_get_hospitals_lambda.zip
+gateway_eka_lambda.zip

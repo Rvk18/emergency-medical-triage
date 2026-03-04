@@ -15,7 +15,8 @@ logger = logging.getLogger(__name__)
 def handler(event: dict, context: object) -> dict:
     """
     API Gateway Lambda proxy handler for POST /triage.
-    Expects body: {"symptoms": ["..."], "vitals": {...}, "age_years": int?, "sex": str?, "submitted_by": str?}
+    Expects body: {"symptoms": ["..."], "vitals": {...}, "age_years": int?, "sex": str?, "submitted_by": str?, "session_id": str?, "patient_id": str?}
+    Optional session_id: reuse same AgentCore session across triage → hospitals → route (AC-3 memory). Response includes session_id (echo or generated).
     """
     try:
         if event.get("httpMethod") != "POST":
@@ -35,7 +36,10 @@ def handler(event: dict, context: object) -> dict:
 
     try:
         result = assess_triage(request)
-        request_id = uuid.uuid4()
+        request_id = uuid.uuid4()  # for DB and response correlation
+        lambda_request_id = getattr(context, "aws_request_id", None) if context else None
+        if lambda_request_id:
+            logger.info("Triage success request_id=%s aws_request_id=%s", request_id, lambda_request_id)
         model_id = os.environ.get("BEDROCK_MODEL_ID")
 
         row_id = None

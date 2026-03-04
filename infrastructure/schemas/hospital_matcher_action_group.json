@@ -1,0 +1,53 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Hospital Matcher API",
+    "version": "1.0.0",
+    "description": "Submit hospital match recommendations for triage routing"
+  },
+  "paths": {
+    "/submit_hospital_matches": {
+      "post": {
+        "summary": "Submit hospital match recommendations",
+        "description": "Submit hospital match recommendations. Call with hospitals as JSON string and safety_disclaimer. Hospitals must be array of objects with hospital_id, name, match_score, match_reasons.",
+        "operationId": "submit_hospital_matches",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["hospitals", "safety_disclaimer"],
+                "properties": {
+                  "hospitals": {
+                    "type": "string",
+                    "description": "JSON array of hospital objects. Each object: hospital_id (string), name (string), match_score (number 0-1), match_reasons (array of strings), estimated_minutes (optional), specialties (optional)"
+                  },
+                  "safety_disclaimer": {
+                    "type": "string",
+                    "description": "Required disclaimer for transport"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {"type": "string", "description": "Status"}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
