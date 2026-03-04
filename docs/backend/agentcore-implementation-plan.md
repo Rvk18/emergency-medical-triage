@@ -88,21 +88,19 @@
 
 ## Phases
 
-### Phase AC-1: Foundation (AgentCore Runtime + Gateway + Observability)
+### Phase AC-1: Foundation — ✅ Done
 
-**Goal:** Stand up AgentCore Runtime and Gateway; connect Hospital Matcher as proof of concept; add basic tracing/metrics.
+**Goal:** Stand up AgentCore Runtime and Gateway; connect Hospital Matcher; add Eka for Triage; basic tracing.
 
 **Deliverables:**
-- [ ] AgentCore Runtime workspace/deployment — **In progress** (agentcore/agent/)
-- [ ] AgentCore Gateway configured (Lambda or synthetic data; MCP if available) — **Deferred to AC-3** (using in-agent synthetic tool)
-- [x] Hospital Matcher agent deployed to Runtime (or Lambda calling AgentCore API)
+- [x] Hospital Matcher agent on AgentCore Runtime (Strands + Gateway/synthetic tool)
+- [x] AgentCore Gateway: get_hospitals Lambda target; Eka Lambda target (search_medications, search_protocols)
 - [x] POST /hospitals invokes AgentCore when `use_agentcore=true` (Converse fallback)
-- [x] Basic tracing/metrics (CloudWatch Logs: `HospitalMatcher source= duration_ms=`)
-- [x] Terraform: `use_agentcore`, `agent_runtime_arn`, IAM for `InvokeAgentRuntime`
+- [x] Triage uses Eka tools via Gateway when GATEWAY_* env set
+- [x] Basic tracing (CloudWatch Logs: `HospitalMatcher source= duration_ms=`)
+- [x] Terraform: api_config secret (API URL, Gateway ARNs); single requirements.txt; load_api_config.py (boto3)
 
-**Dependencies:** AgentCore API/SDK availability in us-east-1.
-
-**Manual step:** Deploy the agent with `agentcore deploy` from `agentcore/agent/`, then set `agent_runtime_arn` in tfvars.
+**Manual step:** Deploy the agent with `agentcore deploy` from `agentcore/agent/`, then set `agent_runtime_arn` in tfvars. Run Gateway setup: `python scripts/setup_agentcore_gateway.py` (reads ARNs from api_config secret).
 
 ---
 
@@ -156,22 +154,18 @@
 
 | Phase | Focus | Status | Dependency |
 |-------|-------|--------|------------|
-| AC-1 | Runtime + Gateway + Hospital Matcher PoC | ✅ Done | None |
-| **A** | Wire Hospital Matcher agent to Gateway | Todo | AC-1 |
-| **B** | Add Eka MCP as Gateway target | Todo | AC-1 |
-| **C** | (Eka integration for Triage) | Todo | B |
-| AC-2 | Triage on AgentCore + Observability | Todo | AC-1 |
-| AC-3 | Memory + Hospital MCP | Todo | AC-1, AC-2 |
-| AC-4 | Routing + Identity | Todo | AC-1 |
+| AC-1 | Runtime + Gateway + Hospital Matcher + Eka (A,B,C) | ✅ Done | None |
+| **AC-2** | Triage on AgentCore + Observability | **Next** | AC-1 |
+| **AC-3** | Memory + Hospital MCP | Pending | AC-1, AC-2 |
+| **AC-4** | Routing + Identity | Pending | AC-1 |
 
-## TODO (Continue Later)
+---
 
-1. **A** – Wire Hospital Matcher agent to connect to Gateway MCP; use `get_hospitals` tool from Gateway (OAuth token from Cognito)
-2. **B** – Add Eka MCP as Gateway target (Lambda calling Eka APIs; Eka key from Secrets Manager)
-3. **C** – Wire Triage agent to use Eka tools (drugs, treatment protocols)
-4. **AC-2** – Triage agent on AgentCore Runtime; full observability (traces, dashboards)
-5. **AC-3** – Memory (short/long-term); Hospital Matcher uses Gateway tools
-6. **AC-4** – Routing agent; POST /route; Identity (Cognito)
+## Next: AC-2, AC-3, AC-4
+
+1. **AC-2** – Triage agent on AgentCore Runtime; full observability (traces, CloudWatch dashboards, medical audit); POST /triage invokes AgentCore; persist to Aurora unchanged.
+2. **AC-3** – AgentCore Memory (short/long-term); Hospital Matcher uses Gateway/MCP tools; patient context across triage → hospital → routing.
+3. **AC-4** – Routing agent on AgentCore Runtime; POST /route; AgentCore Identity (Cognito/IdP for RMP); Policy (if GA).
 
 ---
 
@@ -193,22 +187,3 @@
 | MCP not yet ready | Use Gateway with Lambda/API stubs until MCP available |
 
 ---
-
-## Phase AC-1: Immediate Next Steps
-
-1. **Explore AgentCore Console & API**
-   - [AgentCore Get Started](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/agentcore-get-started-toolkit.html)
-   - [AgentCore Developer Guide](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/develop-agents.html)
-   - [AgentCore Python SDK](https://github.com/aws/amazon-bedrock-agentcore-sdk-python)
-
-2. **Create Runtime + Gateway (Terraform or Console)**
-   - Provision AgentCore Runtime workspace
-   - Configure Gateway with `submit_hospital_matches` (Lambda or synthetic data as tool source)
-
-3. **Wire Hospital Matcher Lambda to AgentCore**
-   - Add `USE_AGENTCORE` env var; when true, call AgentCore API instead of Converse
-   - Preserve request/response contract
-   - Converse fallback when `USE_AGENTCORE=false`; hard cutover once stable
-
-4. **Basic tracing/metrics** ✓
-   - CloudWatch Logs: `HospitalMatcher source=agentcore|converse|bedrock_agent duration_ms=...`

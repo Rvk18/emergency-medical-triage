@@ -7,7 +7,40 @@ This guide covers how to test the Gateway wiring (A, B, C) and Eka integration. 
 ## 1. Prerequisites
 
 - **Environment:** Python 3.10+, AWS CLI configured, Terraform and `terraform apply` run if testing deployed Lambdas.
+- **API URL / config:** Stored in Secrets Manager **after you run `terraform apply`**. Terraform creates the **api_config** secret; it does not exist before apply. See [secrets.md](./secrets.md).
 - **Optional:** Eka API key in Terraform (`eka_api_key`) and Gateway setup script run so Eka target and `gateway_config.json` exist.
+
+### 1.1 Getting API URL and config from Secrets
+
+**The api_config secret is created by Terraform** when you run `cd infrastructure && terraform apply`. It does not exist before that. See [secrets.md](./secrets.md) for all secrets.
+
+After apply, the **api_config** secret (`{prefix}/api-config`) contains:
+
+| Secret key | Description |
+|------------|-------------|
+| `api_gateway_url` | Base URL for API (trailing slash), e.g. for curl |
+| `api_gateway_health_url` | Health check URL |
+| `gateway_get_hospitals_lambda_arn` | Lambda ARN for Gateway setup script |
+| `gateway_eka_lambda_arn` | Lambda ARN for Eka Gateway target |
+| `region` | AWS region |
+| `api_config_secret_name`, `bedrock_config_secret_name`, `rds_config_secret_name`, `eka_config_secret_name` | Names of other secrets (eka null if not set) |
+
+**Option A – Set env vars in the shell (then use API_URL in curl):**
+
+```bash
+eval $(python scripts/load_api_config.py --exports)
+curl -s "${API_URL}health"
+curl -s -X POST "${API_URL}triage" ...
+```
+
+**Option B – Get only the API URL (e.g. for one-off curl):**
+
+```bash
+API_URL=$(python scripts/load_api_config.py --url)
+curl -s "${API_URL}health"
+```
+
+Override the secret name with `API_CONFIG_SECRET_NAME` or prefix with `NAME_PREFIX`. The script uses **boto3** (no AWS CLI required).
 
 ---
 
@@ -120,7 +153,7 @@ These require Terraform-applied infrastructure and, for Gateway/Eka, the setup s
 - **Expect:** 200, JSON with `severity`, `recommendations`, `safety_disclaimer`, etc. Model uses only `submit_triage_result` (no Eka tools) when Triage Lambda has no `GATEWAY_*` env vars.
 
 ```bash
-API_URL=$(cd infrastructure && terraform output -raw api_gateway_url 2>/dev/null || echo "https://YOUR_API.execute-api.us-east-1.amazonaws.com/dev")
+eval $(python scripts/load_api_config.py --exports)   # sets API_URL from Secrets Manager
 curl -s -X POST "${API_URL}triage" \
   -H "Content-Type: application/json" \
   -d '{"symptoms":["chest pain"],"vitals":{"heart_rate":110}}' | jq .
@@ -139,6 +172,7 @@ Same `curl` as above; ensure Gateway and Eka are configured.
 - **Expect:** 200, `hospitals` array (synthetic data from in-agent tool).
 
 ```bash
+eval $(python scripts/load_api_config.py --exports)
 curl -s -X POST "${API_URL}hospitals" \
   -H "Content-Type: application/json" \
   -d '{"severity":"high","recommendations":["Emergency department"],"limit":3}' | jq .
@@ -151,24 +185,20 @@ curl -s -X POST "${API_URL}hospitals" \
 
 Same `curl` as 3.3.
 
-### 3.5 Gateway setup script (dry run)
+### 3.5 Gateway setup script (no Terraform output needed)
 
-- **Prereq:** Terraform applied; `gateway_get_hospitals_lambda_arn` output.
-- **Action:** Run setup script with hospitals Lambda ARN only (no `--eka` if you want to test hospitals target only).
-
-```bash
-export GATEWAY_GET_HOSPITALS_LAMBDA_ARN=$(cd infrastructure && terraform output -raw gateway_get_hospitals_lambda_arn)
-python scripts/setup_agentcore_gateway.py
-# Check gateway_config.json for gateway_url, gateway_id, client_info
-```
-
-With Eka Lambda:
+The setup script reads **Lambda ARNs from the api_config secret** if `GATEWAY_GET_HOSPITALS_LAMBDA_ARN` / `GATEWAY_EKA_LAMBDA_ARN` are not set. After `terraform apply`, run:
 
 ```bash
-export GATEWAY_EKA_LAMBDA_ARN=$(cd infrastructure && terraform output -raw gateway_eka_lambda_arn)
+# Option A: set env vars from secret (boto3), then run setup
+eval $(python scripts/load_api_config.py --exports)
 python scripts/setup_agentcore_gateway.py
-# Config should include eka_target_name, eka_lambda_arn
+
+# Option B: run with no args; script reads api_config secret via boto3
+python scripts/setup_agentcore_gateway.py
 ```
+
+If the secret is missing or you need to override: set `GATEWAY_GET_HOSPITALS_LAMBDA_ARN` and optionally `GATEWAY_EKA_LAMBDA_ARN`, or pass as arguments. Use `--gateway-id <id>` when reusing an existing Gateway.
 
 ---
 

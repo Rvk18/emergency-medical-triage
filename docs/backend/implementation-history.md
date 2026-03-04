@@ -158,15 +158,13 @@
 - **A (done):** Hospital Matcher agent uses Gateway when GATEWAY_* env vars set on Runtime (`agentcore/agent/gateway_client.py`, fallback to synthetic)
 - **B (done):** Eka Lambda target (`gateway_eka.tf`, `gateway_eka_lambda_src/`); setup script `--eka <arn>`; tools `eka-target___search_medications`, `eka-target___search_protocols`
 - **C (done):** Triage Converse flow uses Eka when GATEWAY_* set on Triage Lambda (`triage/core/gateway_client.py`, `get_triage_tool_config_with_eka`, multi-round tool loop in `agent.py`)
+- **Config:** Terraform creates **api_config** secret (keys: `api_gateway_url`, `api_gateway_health_url`, `gateway_get_hospitals_lambda_arn`, `gateway_eka_lambda_arn`, etc.). Load script: `scripts/load_api_config.py` (boto3); usage: `eval $(python scripts/load_api_config.py --exports)` or `--url`. Single **requirements.txt** at repo root.
 - `gateway_config.json` with gateway_url, gateway_id (gitignored)
 
 ---
 
 ## Next Steps (TODO)
 
-1. **A:** Wire Hospital Matcher agent to Gateway (use get_hospitals from Gateway instead of in-agent tool) — **Done**
-2. **B:** Add Eka as Gateway target (Lambda/API); wire Triage to use Indian drugs/protocols — **Done**
-3. **C:** (Combined with A/B as needed) — **Done** (Triage uses Eka via Gateway)
-4. **AC-2:** Triage on AgentCore + full Observability
-5. **AC-3:** Memory + Hospital MCP integration
-6. **AC-4:** Routing agent + POST /route + Identity
+1. **AC-2** – Triage on AgentCore Runtime; full observability (traces, CloudWatch dashboards, medical audit); POST /triage invokes AgentCore; persist to Aurora unchanged.
+2. **AC-3** – AgentCore Memory (short/long-term); Hospital Matcher uses Gateway/MCP tools; patient context across triage → hospital → routing.
+3. **AC-4** – Routing agent on AgentCore Runtime; POST /route; AgentCore Identity (Cognito/IdP for RMP); Policy (if GA).

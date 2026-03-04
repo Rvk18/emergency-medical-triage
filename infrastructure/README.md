@@ -42,7 +42,8 @@ Terraform configuration for Emergency Medical Triage AWS resources.
 After apply:
 
 - **API:** `api_gateway_url`, `api_gateway_health_url`
-- **Lambdas:** `gateway_get_hospitals_lambda_arn`, `gateway_eka_lambda_arn` (for Gateway setup script)
+- **Secrets:** `api_config_secret_name` – use this to read API URL and Gateway Lambda ARNs (no Terraform output needed). Use `scripts/load_api_config.py` (boto3).
+- **Lambdas:** `gateway_get_hospitals_lambda_arn`, `gateway_eka_lambda_arn` (also stored in api_config secret)
 - **Aurora:** `aurora_cluster_endpoint`, `aurora_cluster_reader_endpoint`
 - **S3:** `s3_bucket_name`, `s3_bucket_arn`
 - **Secrets:** `eka_config_secret_name` (when `eka_api_key` set; sensitive)

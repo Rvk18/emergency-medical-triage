@@ -85,10 +85,8 @@ All additions are **backward compatible**: existing behaviour is unchanged when 
 
 ### 4.1 Gateway setup (one-time)
 
-1. **Terraform:** `terraform apply` (creates `gateway-get-hospitals` and `gateway-eka` Lambdas).  
-2. **Script:**  
-   `python scripts/setup_agentcore_gateway.py <hospitals_lambda_arn> [--eka <eka_lambda_arn>]`  
-   Creates/ reuses Gateway, adds targets, writes `gateway_config.json`.
+1. **Terraform:** `terraform apply` (creates Lambdas and writes **api_config** to Secrets Manager with `api_gateway_url`, `api_gateway_health_url`, `gateway_get_hospitals_lambda_arn`, `gateway_eka_lambda_arn`).
+2. **Script:** Run `python scripts/setup_agentcore_gateway.py` with no args; it reads Lambda ARNs from the **api_config** secret via boto3. Or run `eval $(python scripts/load_api_config.py --exports)` then run the script.
 
 ### 4.2 Hospital Matcher → Gateway
 
@@ -117,9 +115,6 @@ On the **Triage Lambda**, set the same `GATEWAY_*` variables. Ensure the Eka tar
 ## 5. Testing
 
 **Quick local checks (no AWS):**
-
-```bash
-# From project root: triage tool config and gateway client
 PYTHONPATH=src python3 -c "
 import os
 for k in ('GATEWAY_MCP_URL','GATEWAY_CLIENT_ID','GATEWAY_CLIENT_SECRET','GATEWAY_TOKEN_ENDPOINT'):
@@ -160,6 +155,7 @@ Full steps, sample payloads, and integration tests: **[TESTING-Gateway-Eka.md](.
 | Eka Lambda returns stub data | Secret `{prefix}/eka-config` exists and has `api_key`? Lambda env `EKA_CONFIG_SECRET_NAME` correct? |
 | Gateway 403 / auth errors | `client_info` in `gateway_config.json`; token endpoint and scope correct; Cognito app client not disabled. |
 | Tool not found in MCP | Full tool name is `{target_name}___{tool_name}` (e.g. `eka-target___search_medications`). |
+| Script can't find Lambda ARNs | Ensure **api_config** secret exists (created by Terraform). Run `eval $(python scripts/load_api_config.py --exports)` or set `API_CONFIG_SECRET_NAME`. |
 
 ---
 

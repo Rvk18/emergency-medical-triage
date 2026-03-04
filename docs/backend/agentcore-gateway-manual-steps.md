@@ -1,8 +1,8 @@
 # AgentCore Gateway: Manual Setup Steps
 
-**Release and testing:** See [RELEASE-Gateway-Eka-Integration.md](./RELEASE-Gateway-Eka-Integration.md) for a full description of what was released and [TESTING-Gateway-Eka.md](./TESTING-Gateway-Eka.md) for how to test Gateway and Eka integration.
+**Release and testing:** See [RELEASE-Gateway-Eka-Integration.md](./RELEASE-Gateway-Eka-Integration.md) and [TESTING-Gateway-Eka.md](./TESTING-Gateway-Eka.md).
 
-The Gateway itself is not managed by Terraform because the bedrock-agentcore-starter-toolkit creates Cognito, Gateway, and target resources via the AWS Control Plane API. Terraform manages only the **get_hospitals** and **gateway_eka** Lambdas that the Gateway invokes.
+The Gateway itself is not managed by Terraform. Terraform creates the **get_hospitals** and **gateway_eka** Lambdas and writes their ARNs (and the API URL) to the **api_config** secret so you don't need to rely on Terraform outputs.
 
 ## Prerequisites
 
@@ -18,11 +18,7 @@ cd infrastructure
 terraform apply
 ```
 
-Note the output:
-
-```
-gateway_get_hospitals_lambda_arn = "arn:aws:lambda:us-east-1:ACCOUNT:function:emergency-medical-triage-dev-gateway-get-hospitals"
-```
+Terraform creates the Lambdas and writes **api_config** to Secrets Manager (`{prefix}/api-config`) with `api_gateway_url`, `api_gateway_health_url`, `gateway_get_hospitals_lambda_arn`, `gateway_eka_lambda_arn`. Use the secret for scripts and curl (no need to run `terraform output`).
 
 ## Step 2: Install Setup Script Dependencies
 
@@ -32,16 +28,18 @@ pip install bedrock-agentcore-starter-toolkit boto3
 
 ## Step 3: Run Gateway Setup Script
 
-```bash
-# Hospitals only
-python scripts/setup_agentcore_gateway.py $(cd infrastructure && terraform output -raw gateway_get_hospitals_lambda_arn)
+No Terraform output needed: the script reads Lambda ARNs from the **api_config** secret if env vars are not set.
 
-# With Eka target (run after Terraform creates both Lambdas)
-export GATEWAY_GET_HOSPITALS_LAMBDA_ARN=$(cd infrastructure && terraform output -raw gateway_get_hospitals_lambda_arn)
-export GATEWAY_EKA_LAMBDA_ARN=$(cd infrastructure && terraform output -raw gateway_eka_lambda_arn)
+```bash
+# Option A: load config from secret (boto3), then run setup
+eval $(python scripts/load_api_config.py --exports)
 python scripts/setup_agentcore_gateway.py
-# Or: python scripts/setup_agentcore_gateway.py $GATEWAY_GET_HOSPITALS_LAMBDA_ARN --eka $GATEWAY_EKA_LAMBDA_ARN
+
+# Option B: run with no args; script reads api_config secret via boto3
+python scripts/setup_agentcore_gateway.py
 ```
+
+To pass ARNs explicitly: `GATEWAY_GET_HOSPITALS_LAMBDA_ARN`, `GATEWAY_EKA_LAMBDA_ARN`, or first arg and `--eka <arn>`. Use `--gateway-id <id>` when reusing an existing Gateway.
 
 The script will:
 

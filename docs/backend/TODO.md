@@ -8,6 +8,7 @@
 ## Status
 
 - **AC-1 (Gateway + Eka):** Done. Hospital Matcher → Gateway (A), Eka as Gateway target (B), Triage → Eka (C). See [RELEASE-Gateway-Eka-Integration.md](./RELEASE-Gateway-Eka-Integration.md) and [TESTING-Gateway-Eka.md](./TESTING-Gateway-Eka.md).
+- **Next:** Proceeding with **AC-2** (Triage on AgentCore + Observability), **AC-3** (Memory + Hospital MCP), **AC-4** (Routing + Identity).
 
 ---
 
@@ -34,6 +35,7 @@
 
 - [RELEASE-Gateway-Eka-Integration.md](./RELEASE-Gateway-Eka-Integration.md) – AC-1 release notes, config, quick test
 - [TESTING-Gateway-Eka.md](./TESTING-Gateway-Eka.md) – Unit, integration, API tests
+- [secrets.md](./secrets.md) – Terraform-created secrets, api_config keys, load script
 - [agentcore-implementation-plan.md](./agentcore-implementation-plan.md) – Phases, architecture
 - [agentcore-gateway-manual-steps.md](./agentcore-gateway-manual-steps.md) – Gateway setup
 - [implementation-history.md](./implementation-history.md) – History, fixes

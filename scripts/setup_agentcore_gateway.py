@@ -8,16 +8,15 @@ and saves gateway_config.json.
 
 Prerequisites:
   - pip install bedrock-agentcore-starter-toolkit boto3
-  - Terraform apply (creates get_hospitals Lambda)
-  - Set GATEWAY_GET_HOSPITALS_LAMBDA_ARN or pass as first arg
+  - Terraform apply (creates Lambdas and api_config secret)
+  - Lambda ARN: from env GATEWAY_GET_HOSPITALS_LAMBDA_ARN, first arg, or api_config secret
 
 Usage:
-  python scripts/setup_agentcore_gateway.py <lambda_arn>
-  python scripts/setup_agentcore_gateway.py <lambda_arn> --gateway-id <existing_gateway_id>
-  python scripts/setup_agentcore_gateway.py <hospitals_lambda_arn> --eka <eka_lambda_arn>
+  python scripts/setup_agentcore_gateway.py
+  python scripts/setup_agentcore_gateway.py <lambda_arn> [--gateway-id <id>] [--eka <eka_arn>]
 
-  If Gateway already exists (e.g. from a previous failed run), use --gateway-id to add the target only.
-  Use --eka to add Eka (Indian drugs/protocols) as a second Gateway target.
+  With no args, the script reads gateway_get_hospitals_lambda_arn and gateway_eka_lambda_arn
+  from the api_config secret ({prefix}/api-config). Override with env or arguments.
 """
 
 import json
@@ -98,6 +97,22 @@ EKA_SEARCH_PROTOCOLS_SCHEMA = {
 }
 
 
+def _load_api_config_from_secret() -> dict | None:
+    """Load api_config from Secrets Manager (no Terraform output). Returns dict or None."""
+    secret_name = os.environ.get("API_CONFIG_SECRET_NAME", "").strip()
+    if not secret_name:
+        # Default: same prefix as Terraform local.name_prefix
+        prefix = os.environ.get("NAME_PREFIX", "emergency-medical-triage-dev")
+        secret_name = f"{prefix}/api-config"
+    try:
+        client = boto3.client("secretsmanager", region_name=REGION)
+        resp = client.get_secret_value(SecretId=secret_name)
+        return json.loads(resp["SecretString"])
+    except Exception as e:
+        logger.debug("Could not load api_config secret %s: %s", secret_name, e)
+        return None
+
+
 def parse_args() -> tuple[str, str | None, str | None]:
     """Return (hospitals_lambda_arn, existing_gateway_id or None, eka_lambda_arn or None)."""
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
@@ -114,10 +129,18 @@ def parse_args() -> tuple[str, str | None, str | None]:
             i += 2
             continue
         i += 1
-    arn = os.environ.get("GATEWAY_GET_HOSPITALS_LAMBDA_ARN") or (args[0] if args else None)
+    arn = os.environ.get("GATEWAY_GET_HOSPITALS_LAMBDA_ARN", "").strip() or (args[0] if args else None)
+    config = _load_api_config_from_secret()
     if not arn or arn.startswith("--"):
-        print("ERROR: Lambda ARN required as first argument.")
-        sys.exit(1)
+        if config:
+            arn = (config.get("gateway_get_hospitals_lambda_arn") or "").strip()
+            if not eka_arn:
+                eka_arn = (config.get("gateway_eka_lambda_arn") or "").strip() or None
+        if not arn:
+            print("ERROR: Lambda ARN required. Set GATEWAY_GET_HOSPITALS_LAMBDA_ARN, pass as first arg, or ensure api_config secret exists.")
+            sys.exit(1)
+    if not eka_arn and config:
+        eka_arn = (config.get("gateway_eka_lambda_arn") or "").strip() or None
     return arn, gateway_id, eka_arn
 
 

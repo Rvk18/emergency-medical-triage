@@ -58,3 +58,8 @@ output "api_gateway_health_url" {
   description = "API Gateway health check URL"
   value       = "${aws_api_gateway_stage.main.invoke_url}/health"
 }
+
+output "api_config_secret_name" {
+  description = "Secrets Manager secret name for API config (api_gateway_url, gateway Lambda ARNs). Use this to read config without Terraform outputs."
+  value       = aws_secretsmanager_secret.api_config.name
+}

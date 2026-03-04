@@ -75,9 +75,12 @@ AI_Hackathon_Triage/
    ```bash
    cd infrastructure
    cp terraform.tfvars.example terraform.tfvars   # Edit db_username, db_password
-   cp secrets.env.example secrets.env            # Add AWS credentials
    terraform init && terraform apply
-   ./verify-resources.sh
+   ```
+   After apply, API URL and Gateway Lambda ARNs are in Secrets Manager (**api_config**). Terraform creates this secret on apply; it does not exist before. See [docs/backend/secrets.md](docs/backend/secrets.md). To load into the shell:
+   ```bash
+   eval $(python scripts/load_api_config.py --exports)   # sets API_URL, GATEWAY_*_LAMBDA_ARN
+   curl -s "${API_URL}health"
    ```
 
 ## Documentation
@@ -87,6 +90,7 @@ AI_Hackathon_Triage/
 | [requirements.md](docs/backend/requirements.md) | User stories, acceptance criteria, glossary |
 | [design.md](docs/backend/design.md) | Architecture, components, data models |
 | [implementation-history.md](docs/backend/implementation-history.md) | Decisions, phases, fixes |
+| [secrets.md](docs/backend/secrets.md) | Terraform-created secrets, api_config keys, load script |
 | [agentcore-implementation-plan.md](docs/backend/agentcore-implementation-plan.md) | AgentCore phases (AC-1–AC-4) |
 | [RELEASE-Gateway-Eka-Integration.md](docs/backend/RELEASE-Gateway-Eka-Integration.md) | **AC-1 release:** Gateway + Eka wiring, config, quick test |
 | [TESTING-Gateway-Eka.md](docs/backend/TESTING-Gateway-Eka.md) | Unit, integration, and API testing for Gateway/Eka |
