@@ -98,6 +98,49 @@ EKA_SEARCH_PROTOCOLS_SCHEMA = {
     },
 }
 
+# Google Maps (Directions + Geocoding for routing)
+GET_DIRECTIONS_SCHEMA = {
+    "name": "get_directions",
+    "description": "Get driving distance, duration, and directions URL between origin and destination. Pass coordinates (origin_lat, origin_lon, dest_lat, dest_lon) or addresses (origin_address, dest_address).",
+    "inputSchema": {
+        "type": "object",
+        "properties": {
+            "origin_lat": {"type": "number", "description": "Origin latitude"},
+            "origin_lon": {"type": "number", "description": "Origin longitude"},
+            "dest_lat": {"type": "number", "description": "Destination latitude"},
+            "dest_lon": {"type": "number", "description": "Destination longitude"},
+            "origin_address": {"type": "string", "description": "Origin address (geocoded if coordinates not provided)"},
+            "dest_address": {"type": "string", "description": "Destination address (geocoded if coordinates not provided)"},
+        },
+        "required": [],
+    },
+}
+GEOCODE_ADDRESS_SCHEMA = {
+    "name": "geocode_address",
+    "description": "Convert an address string to latitude and longitude.",
+    "inputSchema": {
+        "type": "object",
+        "properties": {
+            "address": {"type": "string", "description": "Address to geocode"},
+        },
+        "required": ["address"],
+    },
+}
+
+GET_ROUTE_SCHEMA = {
+    "name": "get_route",
+    "description": "Get driving route from origin to destination. Calls the Routing agent (which uses Google Maps MCP).",
+    "inputSchema": {
+        "type": "object",
+        "properties": {
+            "origin_lat": {"type": "number"},
+            "origin_lon": {"type": "number"},
+            "dest_lat": {"type": "number"},
+            "dest_lon": {"type": "number"},
+        },
+    },
+}
+
 
 def _load_api_config_from_secret() -> dict | None:
     """Load api_config from Secrets Manager (no Terraform output). Returns dict or None."""
@@ -115,11 +158,13 @@ def _load_api_config_from_secret() -> dict | None:
         return None
 
 
-def parse_args() -> tuple[str, str | None, str | None]:
-    """Return (hospitals_lambda_arn, existing_gateway_id or None, eka_lambda_arn or None)."""
+def parse_args() -> tuple[str, str | None, str | None, str | None, str | None]:
+    """Return (hospitals_lambda_arn, gateway_id or None, eka_arn, maps_arn, routing_arn)."""
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     gateway_id = None
     eka_arn = os.environ.get("GATEWAY_EKA_LAMBDA_ARN", "").strip() or None
+    maps_arn = os.environ.get("GATEWAY_MAPS_LAMBDA_ARN", "").strip() or None
+    routing_arn = os.environ.get("GATEWAY_ROUTING_LAMBDA_ARN", "").strip() or None
     i = 0
     while i < len(sys.argv) - 1:
         if sys.argv[i] == "--gateway-id":
@@ -130,6 +175,14 @@ def parse_args() -> tuple[str, str | None, str | None]:
             eka_arn = sys.argv[i + 1]
             i += 2
             continue
+        if sys.argv[i] == "--maps":
+            maps_arn = sys.argv[i + 1]
+            i += 2
+            continue
+        if sys.argv[i] == "--routing":
+            routing_arn = sys.argv[i + 1]
+            i += 2
+            continue
         i += 1
     arn = os.environ.get("GATEWAY_GET_HOSPITALS_LAMBDA_ARN", "").strip() or (args[0] if args else None)
     config = _load_api_config_from_secret()
@@ -138,12 +191,20 @@ def parse_args() -> tuple[str, str | None, str | None]:
             arn = (config.get("gateway_get_hospitals_lambda_arn") or "").strip()
             if not eka_arn:
                 eka_arn = (config.get("gateway_eka_lambda_arn") or "").strip() or None
+            if not maps_arn:
+                maps_arn = (config.get("gateway_maps_lambda_arn") or "").strip() or None
+            if not routing_arn:
+                routing_arn = (config.get("gateway_routing_lambda_arn") or "").strip() or None
         if not arn:
             print("ERROR: Lambda ARN required. Set GATEWAY_GET_HOSPITALS_LAMBDA_ARN, pass as first arg, or ensure api_config secret exists.")
             sys.exit(1)
     if not eka_arn and config:
         eka_arn = (config.get("gateway_eka_lambda_arn") or "").strip() or None
-    return arn, gateway_id, eka_arn
+    if not maps_arn and config:
+        maps_arn = (config.get("gateway_maps_lambda_arn") or "").strip() or None
+    if not routing_arn and config:
+        routing_arn = (config.get("gateway_routing_lambda_arn") or "").strip() or None
+    return arn, gateway_id, eka_arn, maps_arn, routing_arn
 
 
 def add_lambda_permission_for_gateway(lambda_arn: str, gateway_role_arn: str, statement_suffix: str = "") -> None:
@@ -229,10 +290,14 @@ def setup_gateway() -> dict:
     if "--save-to-secrets-only" in sys.argv:
         _migrate_gateway_config_to_secrets()
         return {}
-    lambda_arn, existing_gateway_id, eka_lambda_arn = parse_args()
+    lambda_arn, existing_gateway_id, eka_lambda_arn, maps_lambda_arn, routing_lambda_arn = parse_args()
     logger.info("Using Lambda ARN: %s", lambda_arn)
     if eka_lambda_arn:
         logger.info("Eka Lambda ARN: %s", eka_lambda_arn)
+    if maps_lambda_arn:
+        logger.info("Maps Lambda ARN: %s", maps_lambda_arn)
+    if routing_lambda_arn:
+        logger.info("Routing Lambda ARN: %s", routing_lambda_arn)
 
     control_client = boto3.client("bedrock-agentcore-control", region_name=REGION)
     client = GatewayClient(region_name=REGION)
@@ -270,6 +335,34 @@ def setup_gateway() -> dict:
             gateway = find_existing_gateway(control_client, GATEWAY_NAME)
             if not gateway:
                 raise RuntimeError(f"Gateway '{GATEWAY_NAME}' exists but could not be found. Use --gateway-id <id>.")
+            # Sync authorizer to this run's OAuth so tokens from client_info work (Gateway was created with an older OAuth)
+            try:
+                ci = cognito_response.get("client_info") or {}
+                user_pool_id = (ci.get("user_pool_id") or "").strip()
+                client_id = (ci.get("client_id") or "").strip()
+                scope = (ci.get("scope") or "emergency-triage-hospitals/invoke").strip()
+                if user_pool_id and client_id:
+                    discovery_url = f"https://cognito-idp.{REGION}.amazonaws.com/{user_pool_id}/.well-known/openid-configuration"
+                    gw_detail = control_client.get_gateway(gatewayIdentifier=gateway["gatewayId"])
+                    control_client.update_gateway(
+                        gatewayIdentifier=gateway["gatewayId"],
+                        name=gw_detail.get("name") or GATEWAY_NAME,
+                        roleArn=gw_detail.get("roleArn") or "",
+                        protocolType=gw_detail.get("protocolType") or "MCP",
+                        authorizerType="CUSTOM_JWT",
+                        authorizerConfiguration={
+                            "customJWTAuthorizer": {
+                                "discoveryUrl": discovery_url,
+                                "allowedClients": [client_id],
+                                "allowedScopes": [scope],
+                            },
+                        },
+                    )
+                    logger.info("Gateway authorizer updated to use current OAuth (client_info)")
+                else:
+                    logger.warning("client_info missing user_pool_id or client_id; Gateway may reject tokens from secret")
+            except Exception as err:
+                logger.warning("Could not update Gateway authorizer: %s", err)
             # Keep cognito_response["client_info"] from create_oauth_authorizer so config gets OAuth credentials
 
         # Fix IAM permissions (if toolkit created a role)
@@ -337,7 +430,7 @@ def setup_gateway() -> dict:
             logger.info("Eka target added. Tool names: %s___search_medications, %s___search_protocols", eka_target_name, eka_target_name)
             try:
                 gw_response = control_client.get_gateway(gatewayIdentifier=gateway_id)
-                role_arn = gw_response.get("gateway", {}).get("executionRoleArn")
+                role_arn = gw_response.get("roleArn") or gw_response.get("gateway", {}).get("executionRoleArn")
                 if role_arn:
                     add_lambda_permission_for_gateway(eka_lambda_arn, role_arn, "Eka")
             except Exception as e:
@@ -348,11 +441,114 @@ def setup_gateway() -> dict:
             else:
                 raise
 
+    # 3c. Optionally add Maps target (get_directions, geocode_address)
+    if maps_lambda_arn:
+        maps_target_name = "maps-target"
+        logger.info("Adding Maps Lambda target (%s)...", maps_target_name)
+        try:
+            control_client.create_gateway_target(
+                gatewayIdentifier=gateway_id,
+                name=maps_target_name,
+                description="Google Maps: directions and geocoding for routing",
+                targetConfiguration={
+                    "mcp": {
+                        "lambda": {
+                            "lambdaArn": maps_lambda_arn,
+                            "toolSchema": {
+                                "inlinePayload": [GET_DIRECTIONS_SCHEMA, GEOCODE_ADDRESS_SCHEMA],
+                            },
+                        }
+                    }
+                },
+                credentialProviderConfigurations=[
+                    {"credentialProviderType": "GATEWAY_IAM_ROLE"},
+                ],
+            )
+            logger.info("Maps target added. Tool names: %s___get_directions, %s___geocode_address", maps_target_name, maps_target_name)
+            try:
+                gw_response = control_client.get_gateway(gatewayIdentifier=gateway_id)
+                role_arn = gw_response.get("roleArn") or gw_response.get("gateway", {}).get("executionRoleArn")
+                if role_arn:
+                    add_lambda_permission_for_gateway(maps_lambda_arn, role_arn, "Maps")
+            except Exception as e:
+                logger.warning("Could not add Maps Lambda permission: %s", e)
+        except ClientError as e:
+            if e.response.get("Error", {}).get("Code") == "ConflictException":
+                logger.info("Maps target already exists; updating schema so Gateway accepts coordinate-only payloads")
+                try:
+                    paginator = control_client.get_paginator("list_gateway_targets")
+                    for page in paginator.paginate(gatewayIdentifier=gateway_id):
+                        for t in page.get("items", []):
+                            if t.get("name") == maps_target_name:
+                                target_id = t.get("targetId")
+                                if target_id:
+                                    control_client.update_gateway_target(
+                                        gatewayIdentifier=gateway_id,
+                                        targetId=target_id,
+                                        name=maps_target_name,
+                                        description="Google Maps: directions and geocoding for routing",
+                                        targetConfiguration={
+                                            "mcp": {
+                                                "lambda": {
+                                                    "lambdaArn": maps_lambda_arn,
+                                                    "toolSchema": {
+                                                        "inlinePayload": [GET_DIRECTIONS_SCHEMA, GEOCODE_ADDRESS_SCHEMA],
+                                                    },
+                                                }
+                                            }
+                                        },
+                                        credentialProviderConfigurations=[
+                                            {"credentialProviderType": "GATEWAY_IAM_ROLE"},
+                                        ],
+                                    )
+                                    logger.info("Maps target schema updated")
+                                break
+                        else:
+                            continue
+                        break
+                except ClientError as err:
+                    logger.warning("Could not update maps target schema: %s", err)
+            else:
+                raise
+
+    # 3d. Routing agent target (get_route – Hospital Matcher calls this; agent uses Google Maps MCP)
+    if routing_lambda_arn:
+        routing_target_name = "routing-target"
+        logger.info("Adding Routing agent Lambda target (%s)...", routing_target_name)
+        try:
+            control_client.create_gateway_target(
+                gatewayIdentifier=gateway_id,
+                name=routing_target_name,
+                description="Routing agent: get_route (agent uses Google Maps MCP)",
+                targetConfiguration={
+                    "mcp": {
+                        "lambda": {
+                            "lambdaArn": routing_lambda_arn,
+                            "toolSchema": {"inlinePayload": [GET_ROUTE_SCHEMA]},
+                        }
+                    }
+                },
+                credentialProviderConfigurations=[{"credentialProviderType": "GATEWAY_IAM_ROLE"}],
+            )
+            logger.info("Routing target added. Tool name: %s___get_route", routing_target_name)
+            try:
+                gw_response = control_client.get_gateway(gatewayIdentifier=gateway_id)
+                role_arn = gw_response.get("roleArn") or gw_response.get("gateway", {}).get("executionRoleArn")
+                if role_arn:
+                    add_lambda_permission_for_gateway(routing_lambda_arn, role_arn, "Routing")
+            except Exception as e:
+                logger.warning("Could not add Routing Lambda permission: %s", e)
+        except ClientError as e:
+            if e.response.get("Error", {}).get("Code") == "ConflictException":
+                logger.info("Routing target already exists")
+            else:
+                raise
+
     # 4. Add Lambda permission for Gateway to invoke our function
     # Get Gateway details to find execution role
     try:
         gw_response = control_client.get_gateway(gatewayIdentifier=gateway_id)
-        role_arn = gw_response.get("gateway", {}).get("executionRoleArn")
+        role_arn = gw_response.get("roleArn") or gw_response.get("gateway", {}).get("executionRoleArn")
         if role_arn:
             add_lambda_permission_for_gateway(lambda_arn, role_arn)
         else:
@@ -373,8 +569,14 @@ def setup_gateway() -> dict:
     if eka_lambda_arn:
         config["eka_target_name"] = "eka-target"
         config["eka_lambda_arn"] = eka_lambda_arn
+    if maps_lambda_arn:
+        config["maps_target_name"] = "maps-target"
+        config["maps_lambda_arn"] = maps_lambda_arn
+    if routing_lambda_arn:
+        config["routing_target_name"] = "routing-target"
+        config["routing_lambda_arn"] = routing_lambda_arn
 
-    # Write full config to Secrets Manager (no secrets in code)
+    # Write full config to Secrets Manager
     api_cfg = _load_api_config_from_secret()
     secret_name = (
         os.environ.get("GATEWAY_CONFIG_SECRET_NAME", "").strip()
@@ -401,6 +603,12 @@ def setup_gateway() -> dict:
     if eka_lambda_arn:
         local_config["eka_target_name"] = "eka-target"
         local_config["eka_lambda_arn"] = eka_lambda_arn
+    if maps_lambda_arn:
+        local_config["maps_target_name"] = "maps-target"
+        local_config["maps_lambda_arn"] = maps_lambda_arn
+    if routing_lambda_arn:
+        local_config["routing_target_name"] = "routing-target"
+        local_config["routing_lambda_arn"] = routing_lambda_arn
 
     output_path = os.path.join(PROJECT_ROOT, "gateway_config.json")
     with open(output_path, "w") as f:
@@ -414,6 +622,10 @@ def setup_gateway() -> dict:
     print(f"Tool name (MCP): {target_name}___get_hospitals")
     if eka_lambda_arn:
         print("Eka tools: eka-target___search_medications, eka-target___search_protocols")
+    if maps_lambda_arn:
+        print("Maps tools: maps-target___get_directions, maps-target___geocode_address")
+    if routing_lambda_arn:
+        print("Routing agent: routing-target___get_route (agent uses Google Maps MCP)")
     print("Full config (incl. OAuth) saved to Secrets Manager:", secret_name)
     print("Local gateway_config.json has no secrets; use load_gateway_config.py to export env vars.")
     print("=" * 60)

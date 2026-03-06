@@ -197,8 +197,26 @@ Deploy the triage agent: `cd agentcore/agent && agentcore configure --entrypoint
 
 ---
 
+## AC-4 Routing pipeline (Mar 2026)
+
+### Implemented
+- **POST /route:** API Gateway → Route Lambda (RMP auth via Cognito). Route Lambda reads **gateway-config** from Secrets Manager, gets OAuth token using `client_info.scope` (e.g. `emergency-triage-hospitals/invoke`), calls AgentCore Gateway MCP with **Mcp-Protocol-Version: 2025-03-26**, tool `maps-target___get_directions`. Returns `distance_km`, `duration_minutes`, `directions_url` (or stub when Google Maps API key not set).
+- **Route Lambda** (`infrastructure/route_lambda_src/lambda_handler.py`): Uses http.client to call Gateway; captures full response body on 4xx; returns 400 with Gateway detail on validation errors.
+- **Maps Lambda** (`infrastructure/gateway_maps_lambda_src/`): Gateway target for `get_directions` and `geocode_address`; stub when `GOOGLE_MAPS_CONFIG_SECRET_NAME` not set or secret has no `api_key`.
+- **Routing agent** (`agentcore/agent/routing_agent.py`): AgentCore agent that can call maps via Gateway; Hospital Matcher can use `routing-target___get_route` instead of maps directly.
+- **Gateway setup script:** When "Gateway already exists, reusing", script now **updates Gateway authorizer** to current OAuth (discovery URL, allowed clients, scope) so tokens from the saved client_info work. Maps target update includes `credentialProviderConfigurations` when updating schema.
+- **RMP auth:** Cognito User Pool + app client; authorizer on POST /triage, /hospitals, /route. Test token via `python3 scripts/get_rmp_token.py` (reads rmp-test-credentials and api_config from Secrets Manager).
+- **Docs:** [TESTING-Pipeline-curl.md](./TESTING-Pipeline-curl.md), [NEXT-SESSION.md](./NEXT-SESSION.md), [GOOGLE-MAPS-ACCOUNT-SETUP.md](../infrastructure/GOOGLE-MAPS-ACCOUNT-SETUP.md). Use `python3` for scripts (e.g. macOS).
+
+### Fixes applied this session
+- Gateway maps target update: added `credentialProviderConfigurations` to `update_gateway_target` (ValidationException).
+- Route Lambda: scope from config (`client_info.scope`), MCP version 2025-03-26 (Gateway supported only 2025-03-26), http.client for reliable 4xx body capture, return 400 with Gateway detail.
+- Gateway authorizer mismatch: when secret had new OAuth but Gateway used old Cognito → 401. One-time update_gateway to new Cognito; setup script now syncs authorizer when reusing existing Gateway.
+
+---
+
 ## Next Steps (TODO)
 
-1. **AC-2** – Triage on AgentCore Runtime; full observability (traces, CloudWatch dashboards, medical audit); POST /triage invokes AgentCore; persist to Aurora unchanged.
-2. **AC-3** – AgentCore Memory (short/long-term); Hospital Matcher uses Gateway/MCP tools; patient context across triage → hospital → routing.
-3. **AC-4** – Routing agent on AgentCore Runtime; POST /route; AgentCore Identity (Cognito/IdP for RMP); Policy (if GA).
+1. **AC-4** – Routing pipeline **done**. Remaining: guardrails G1–G3, Policy; optional Google Maps API key for real directions. See [NEXT-SESSION.md](./NEXT-SESSION.md).
+2. **Eka validation** – E1–E5 per [ROADMAP-after-AC4.md](./ROADMAP-after-AC4.md).
+3. **HIPAA / compliance** – H1–H4 (PHI scope, encryption, access, audit).

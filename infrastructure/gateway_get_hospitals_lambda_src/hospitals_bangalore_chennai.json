@@ -1,0 +1,10 @@
+[
+  {"hospital_id": "blr-apollo-1", "name": "Apollo Hospital, Bannerghatta Road", "city": "Bangalore", "lat": 12.8967, "lon": 77.5982},
+  {"hospital_id": "blr-narayana-1", "name": "Narayana Health City", "city": "Bangalore", "lat": 12.9064, "lon": 77.5857},
+  {"hospital_id": "blr-victoria-1", "name": "Victoria Hospital", "city": "Bangalore", "lat": 12.9544, "lon": 77.5862},
+  {"hospital_id": "blr-manipal-1", "name": "Manipal Hospital", "city": "Bangalore", "lat": 12.9352, "lon": 77.6145},
+  {"hospital_id": "che-apollo-1", "name": "Apollo Hospitals, Greams Road", "city": "Chennai", "lat": 13.0632, "lon": 80.2516},
+  {"hospital_id": "che-miot-1", "name": "MIOT International", "city": "Chennai", "lat": 13.0123, "lon": 80.2076},
+  {"hospital_id": "che-global-1", "name": "Global Hospitals", "city": "Chennai", "lat": 13.0827, "lon": 80.2707},
+  {"hospital_id": "che-gg-1", "name": "Government General Hospital", "city": "Chennai", "lat": 13.0790, "lon": 80.2732}
+]

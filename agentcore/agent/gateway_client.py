@@ -147,3 +147,47 @@ def search_protocols_via_gateway(queries: list[dict] | None = None) -> dict[str,
     except Exception as e:
         logger.warning("Eka search_protocols failed: %s", e)
         return {"protocols": [], "error": str(e)}
+
+
+# Maps tool (for Hospital Matcher – directions between origin and destination)
+GET_DIRECTIONS_TOOL_NAME = "maps-target___get_directions"
+ROUTING_TARGET_GET_ROUTE = "routing-target___get_route"
+
+
+def get_directions_via_gateway(
+    origin_lat: float | None = None,
+    origin_lon: float | None = None,
+    dest_lat: float | None = None,
+    dest_lon: float | None = None,
+    origin_address: str | None = None,
+    dest_address: str | None = None,
+) -> dict[str, Any]:
+    """
+    Call Gateway get_directions tool. Returns {distance_km, duration_minutes, directions_url} or stub.
+    """
+    args: dict[str, Any] = {}
+    if origin_lat is not None and origin_lon is not None:
+        args["origin_lat"] = origin_lat
+        args["origin_lon"] = origin_lon
+    if dest_lat is not None and dest_lon is not None:
+        args["dest_lat"] = dest_lat
+        args["dest_lon"] = dest_lon
+    if origin_address:
+        args["origin_address"] = origin_address
+    if dest_address:
+        args["dest_address"] = dest_address
+    try:
+        return call_gateway_tool(GET_DIRECTIONS_TOOL_NAME, args)
+    except Exception as e:
+        logger.warning("Gateway get_directions failed: %s", e)
+        return {"error": str(e), "distance_km": None, "duration_minutes": None, "directions_url": None}
+
+
+def get_route_via_gateway(origin_lat: float, origin_lon: float, dest_lat: float, dest_lon: float) -> dict[str, Any]:
+    """Call the Routing agent via Gateway (routing-target___get_route). The Routing agent uses Google Maps MCP."""
+    args = {"origin_lat": origin_lat, "origin_lon": origin_lon, "dest_lat": dest_lat, "dest_lon": dest_lon}
+    try:
+        return call_gateway_tool(ROUTING_TARGET_GET_ROUTE, args)
+    except Exception as e:
+        logger.warning("Gateway get_route (Routing agent) failed: %s", e)
+        return {"error": str(e), "distance_km": None, "duration_minutes": None, "directions_url": None}
