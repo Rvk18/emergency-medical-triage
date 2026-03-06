@@ -1,6 +1,7 @@
 # What to work on next (next session)
 
-**Branch to create:** Start from `main` (after merge), then create a new feature branch, e.g. `feature/ac4-continue` or `feature/roadmap-post-ac4`.
+**Branch to create:** Start from `main`, then create a new feature branch.  
+**Current branch:** `feature/ac4-continue` (created; use this for tomorrow’s work).
 
 **Current state (as of merge):**
 - **AC-4 routing pipeline is working:** POST /route returns stub (`distance_km`, `duration_minutes`, `directions_url`, `stub: true`) when Google Maps API key is not set. Full flow: RMP auth → Route Lambda → AgentCore Gateway (OAuth + MCP 2025-03-26) → maps-target___get_directions → Maps Lambda.
