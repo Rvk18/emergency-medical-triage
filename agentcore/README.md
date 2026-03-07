@@ -4,6 +4,8 @@ AgentCore Runtime deployments. Hospital Matcher is used when `USE_AGENTCORE=true
 
 ## Redeploy AgentCore (e.g. after G3 prompt updates)
 
+**Important:** After every `agentcore deploy` you **must** run the corresponding enable script so the runtime keeps Gateway (and Eka on Triage) env. Otherwise POST /hospitals, POST /route, or Eka triage will break. See [docs/DEPLOY.md](../docs/DEPLOY.md) § "After agentcore deploy".
+
 To push the latest agent code (including G3 safety prompts) to all three runtimes:
 
 1. **Prereqs:** From project root, `pip install bedrock-agentcore-starter-toolkit strands-agents` and AWS credentials configured.
@@ -14,7 +16,7 @@ To push the latest agent code (including G3 safety prompts) to all three runtime
    agentcore configure --entrypoint hospital_matcher_agent.py --non-interactive
    agentcore deploy
    ```
-   Note the **Runtime ARN**; ensure `agent_runtime_arn` in `infrastructure/terraform.tfvars` matches (or update tfvars and run `terraform apply` so the Hospital Matcher Lambda uses it).
+   Note the **Runtime ARN**; ensure `agent_runtime_arn` in `infrastructure/terraform.tfvars` matches (or update tfvars and run `terraform apply` so the Hospital Matcher Lambda uses it). **Then run** (from project root): `python3 scripts/enable_gateway_on_hospital_matcher_runtime.py`
 
 3. **Triage** (separate runtime; has Eka tools):
    ```bash
@@ -33,7 +35,7 @@ To push the latest agent code (including G3 safety prompts) to all three runtime
    agentcore configure --entrypoint routing_agent.py --non-interactive
    agentcore deploy
    ```
-   Update `routing_agent_runtime_arn` in `infrastructure/terraform.tfvars` if the ARN changed, then `terraform apply`.
+   Update `routing_agent_runtime_arn` in `infrastructure/terraform.tfvars` if the ARN changed, then `terraform apply`. **Then run** (from project root): `python3 scripts/enable_gateway_on_routing_runtime.py`
 
 5. **Verify:** Run a triage curl and a hospitals curl; confirm responses and that Eka brands appear when you ask for Indian medications.
 
