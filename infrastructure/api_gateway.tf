@@ -131,6 +131,7 @@ resource "aws_api_gateway_deployment" "main" {
       aws_api_gateway_resource.health.id,
       aws_api_gateway_resource.hospitals.id,
       aws_api_gateway_resource.route.id,
+      aws_api_gateway_resource.config.id,
       aws_api_gateway_method.health_get.id,
       aws_api_gateway_integration.health_mock.id,
       aws_api_gateway_method.triage_post.id,
@@ -139,6 +140,8 @@ resource "aws_api_gateway_deployment" "main" {
       aws_api_gateway_integration.hospitals_post.id,
       aws_api_gateway_method.route_post.id,
       aws_api_gateway_integration.route_post.id,
+      aws_api_gateway_method.config_get.id,
+      aws_api_gateway_integration.config_get.id,
       aws_api_gateway_authorizer.rmp.id,
     ]))
   }
