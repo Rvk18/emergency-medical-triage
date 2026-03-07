@@ -16,6 +16,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.medtriage.app.data.triage.VitalsInput
+import com.medtriage.app.ui.components.TriageStepBar
 import com.medtriage.app.ui.theme.Spacing
 
 @Composable
@@ -23,6 +24,7 @@ fun TriageStep3Vitals(
     vitals: VitalsInput,
     onUpdate: (VitalsInput) -> Unit,
     onAssess: () -> Unit,
+    onBack: () -> Unit,
     isAssessing: Boolean = false
 ) {
     var hr by mutableStateOf(vitals.heartRateBpm?.toString() ?: "")
@@ -36,10 +38,12 @@ fun TriageStep3Vitals(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(Spacing.screenHorizontal)
+            .padding(horizontal = Spacing.screenHorizontal)
             .verticalScroll(rememberScrollState())
     ) {
-        Text("Step 3 of 4 — Vitals", style = androidx.compose.material3.MaterialTheme.typography.headlineSmall)
+        TriageStepBar(stepIndicator = "Step 3 of 4", onBack = onBack)
+        Spacer(Modifier.height(Spacing.space8))
+        Text("Vitals", style = androidx.compose.material3.MaterialTheme.typography.headlineSmall)
         Spacer(Modifier.height(Spacing.sectionGap))
         OutlinedTextField(value = hr, onValueChange = { hr = it; onUpdate(vitals.copy(heartRateBpm = it.toIntOrNull())) }, label = { Text("Heart rate (bpm)") }, modifier = Modifier.fillMaxWidth())
         Spacer(Modifier.height(Spacing.space8))

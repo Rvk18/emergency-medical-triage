@@ -34,5 +34,6 @@ data class TriageResult(
     val confidencePercent: Int,
     val recommendedActions: List<String>,
     val safetyDisclaimers: List<String>,
-    val flaggedForReview: Boolean
+    val flaggedForReview: Boolean,
+    val sessionId: String? = null
 )

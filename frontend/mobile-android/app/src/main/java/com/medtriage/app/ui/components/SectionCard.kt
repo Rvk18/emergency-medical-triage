@@ -27,9 +27,9 @@ enum class SectionCardVariant {
 
 @Composable
 fun SectionCard(
+    modifier: Modifier = Modifier,
     title: String? = null,
     variant: SectionCardVariant = SectionCardVariant.Default,
-    modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit
 ) {
     val (containerColor, borderColor) = when (variant) {

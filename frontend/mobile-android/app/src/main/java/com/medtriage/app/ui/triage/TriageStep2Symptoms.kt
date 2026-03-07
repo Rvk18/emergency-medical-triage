@@ -16,13 +16,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.medtriage.app.data.triage.SymptomInput
+import com.medtriage.app.ui.components.TriageStepBar
 import com.medtriage.app.ui.theme.Spacing
 
 @Composable
 fun TriageStep2Symptoms(
     symptoms: SymptomInput,
     onUpdate: (SymptomInput) -> Unit,
-    onNext: () -> Unit
+    onNext: () -> Unit,
+    onBack: () -> Unit
 ) {
     var freeText by mutableStateOf(symptoms.freeText)
     var duration by mutableStateOf(symptoms.durationMinutes?.toString() ?: "")
@@ -31,10 +33,12 @@ fun TriageStep2Symptoms(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(Spacing.screenHorizontal)
+            .padding(horizontal = Spacing.screenHorizontal)
             .verticalScroll(rememberScrollState())
     ) {
-        Text("Step 2 of 4 — Symptoms", style = androidx.compose.material3.MaterialTheme.typography.headlineSmall)
+        TriageStepBar(stepIndicator = "Step 2 of 4", onBack = onBack)
+        Spacer(Modifier.height(Spacing.space8))
+        Text("Symptoms", style = androidx.compose.material3.MaterialTheme.typography.headlineSmall)
         Spacer(Modifier.height(Spacing.sectionGap))
         OutlinedTextField(
             value = freeText,

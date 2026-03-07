@@ -33,7 +33,10 @@ import com.medtriage.app.ui.components.SyncStatusIndicator
 import com.medtriage.app.ui.navigation.NavRoutes
 import com.medtriage.app.ui.dashboard.DashboardFlowScreen
 import com.medtriage.app.ui.hospitals.HospitalsFlowScreen
-import com.medtriage.app.ui.screens.MorePlaceholderScreen
+import com.medtriage.app.ui.patient.NearbyHospitalsScreen
+import com.medtriage.app.ui.patient.PatientDashboardScreen
+import com.medtriage.app.ui.patient.PatientEmergencyRequestScreen
+import com.medtriage.app.ui.screens.MoreScreen
 import com.medtriage.app.ui.triage.TriageFlowScreen
 import com.medtriage.app.ui.theme.Spacing
 
@@ -51,18 +54,29 @@ fun AppShell(
     lastSyncTime: String? = null,
     syncStatus: SyncStatus = SyncStatus.Synced,
     roleBadge: String = "Healthcare Worker",
+    userRole: String = "healthcare_worker",
+    onLogout: () -> Unit = {},
     showCriticalBanner: Boolean = false,
     criticalBannerMessage: String? = null
 ) {
     val navBackStackEntry = navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry.value?.destination
 
-    val bottomNavItems = listOf(
-        BottomNavItem(NavRoutes.Triage, "Triage", Icons.Default.Home),
-        BottomNavItem(NavRoutes.Hospitals, "Hospitals", Icons.Default.Place),
-        BottomNavItem(NavRoutes.Dashboard, "Dashboard", Icons.Default.Person),
-        BottomNavItem(NavRoutes.More, "More", Icons.Default.Menu)
-    )
+    val bottomNavItems = if (userRole == "patient") {
+        listOf(
+            BottomNavItem(NavRoutes.PatientDashboard, "Dashboard", Icons.Default.Person),
+            BottomNavItem(NavRoutes.Hospitals, "Hospitals", Icons.Default.Place),
+            BottomNavItem(NavRoutes.More, "More", Icons.Default.Menu)
+        )
+    } else {
+        listOf(
+            BottomNavItem(NavRoutes.Triage, "Triage", Icons.Default.Home),
+            BottomNavItem(NavRoutes.Hospitals, "Hospitals", Icons.Default.Place),
+            BottomNavItem(NavRoutes.Dashboard, "Dashboard", Icons.Default.Person),
+            BottomNavItem(NavRoutes.More, "More", Icons.Default.Menu)
+        )
+    }
+    val startDestination = if (userRole == "patient") NavRoutes.PatientDashboard else NavRoutes.Triage
 
     Scaffold(
         topBar = {
@@ -113,7 +127,7 @@ fun AppShell(
     ) { paddingValues ->
         NavHost(
             navController = navController,
-            startDestination = NavRoutes.Triage,
+            startDestination = startDestination,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
@@ -129,7 +143,13 @@ fun AppShell(
                     }
                 )
             }
-            composable(NavRoutes.Hospitals) { HospitalsFlowScreen() }
+            composable(NavRoutes.Hospitals) {
+                if (userRole == "patient") {
+                    NearbyHospitalsScreen()
+                } else {
+                    HospitalsFlowScreen()
+                }
+            }
             composable(NavRoutes.Dashboard) {
                 DashboardFlowScreen(
                     onNavigateToTriage = {
@@ -146,7 +166,30 @@ fun AppShell(
                     }
                 )
             }
-            composable(NavRoutes.More) { MorePlaceholderScreen() }
+            composable(NavRoutes.PatientDashboard) {
+                PatientDashboardScreen(
+                    onRequestEmergency = {
+                        navController.navigate(NavRoutes.PatientEmergency) {
+                            launchSingleTop = true
+                        }
+                    }
+                )
+            }
+            composable(NavRoutes.PatientEmergency) {
+                PatientEmergencyRequestScreen(
+                    onBack = { navController.popBackStack() },
+                    onSubmit = {
+                        // Mock: in real app would call API then navigate back
+                        navController.popBackStack()
+                    }
+                )
+            }
+            composable(NavRoutes.More) {
+                MoreScreen(
+                    onLanguage = { /* TODO: open language selector */ },
+                    onLogout = onLogout
+                )
+            }
         }
     }
 }

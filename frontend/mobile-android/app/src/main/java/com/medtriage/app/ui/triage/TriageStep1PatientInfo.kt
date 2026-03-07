@@ -16,13 +16,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.medtriage.app.data.triage.PatientInfo
+import com.medtriage.app.ui.components.TriageStepBar
 import com.medtriage.app.ui.theme.Spacing
 
 @Composable
 fun TriageStep1PatientInfo(
     patientInfo: PatientInfo,
     onUpdate: (PatientInfo) -> Unit,
-    onNext: () -> Unit
+    onNext: () -> Unit,
+    onBack: () -> Unit
 ) {
     var age by mutableStateOf(patientInfo.age?.toString() ?: "")
     var gender by mutableStateOf(patientInfo.gender ?: "")
@@ -32,10 +34,12 @@ fun TriageStep1PatientInfo(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(Spacing.screenHorizontal)
+            .padding(horizontal = Spacing.screenHorizontal)
             .verticalScroll(rememberScrollState())
     ) {
-        Text("Step 1 of 4 — Patient info", style = androidx.compose.material3.MaterialTheme.typography.headlineSmall)
+        TriageStepBar(stepIndicator = "Step 1 of 4", onBack = onBack)
+        Spacer(Modifier.height(Spacing.space8))
+        Text("Patient Information", style = androidx.compose.material3.MaterialTheme.typography.headlineSmall)
         Spacer(Modifier.height(Spacing.sectionGap))
         OutlinedTextField(
             value = age,

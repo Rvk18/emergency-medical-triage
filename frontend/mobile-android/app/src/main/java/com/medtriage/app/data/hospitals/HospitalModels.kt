@@ -8,7 +8,16 @@ data class HospitalMatch(
     val bedsAvailable: Int,
     val bedsTotal: Int,
     val specialistOnCall: Boolean,
-    val matchScorePercent: Int
+    val matchScorePercent: Int,
+    val lat: Double? = null,
+    val lon: Double? = null
+)
+
+/** Result of POST /route – real directions from backend. */
+data class RouteResult(
+    val distanceKm: Double,
+    val durationMinutes: Int,
+    val directionsUrl: String?
 )
 
 data class RouteStep(

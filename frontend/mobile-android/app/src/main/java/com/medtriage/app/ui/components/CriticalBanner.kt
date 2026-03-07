@@ -19,8 +19,8 @@ import com.medtriage.app.ui.theme.Spacing
  */
 @Composable
 fun CriticalBanner(
-    message: String = "CRITICAL — Immediate transport. Do not delay.",
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    message: String = "CRITICAL — Immediate transport. Do not delay."
 ) {
     Box(
         modifier = modifier

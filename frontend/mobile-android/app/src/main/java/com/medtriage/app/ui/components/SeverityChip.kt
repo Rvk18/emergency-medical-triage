@@ -22,8 +22,8 @@ import com.medtriage.app.ui.theme.Spacing
 @Composable
 fun SeverityChip(
     severity: SeverityLevel,
-    label: String = severity.name.lowercase().replaceFirstChar { it.uppercase() },
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    label: String = severity.name.lowercase().replaceFirstChar { it.uppercase() }
 ) {
     val (surface, onSurface) = when (severity) {
         SeverityLevel.CRITICAL -> SeverityCriticalSurface to SeverityCritical

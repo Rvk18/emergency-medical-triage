@@ -27,14 +27,19 @@ fun TriageFlowScreen(
         state.result != null && state.currentStep == 5 -> {
             TriageReportScreen(
                 result = state.result!!,
-                onProceedToHospitalMatching = onProceedToHospitalMatching
+                onProceedToHospitalMatching = {
+                    viewModel.saveResultForHospitals()
+                    onProceedToHospitalMatching()
+                },
+                onBack = { viewModel.goToStep(4) }
             )
         }
         state.result != null && state.currentStep == 4 -> {
             TriageStep4Result(
                 result = state.result!!,
                 onProceedToReport = { viewModel.nextStep() },
-                onOverride = { /* TODO: override flow */ }
+                onOverride = { /* TODO: override flow */ },
+                onBack = { viewModel.goToStep(3) }
             )
         }
         state.currentStep == 0 -> {
@@ -50,17 +55,20 @@ fun TriageFlowScreen(
         state.currentStep == 1 -> TriageStep1PatientInfo(
             patientInfo = state.patientInfo,
             onUpdate = viewModel::updatePatientInfo,
-            onNext = viewModel::nextStep
+            onNext = viewModel::nextStep,
+            onBack = { viewModel.goToStep(0) }
         )
         state.currentStep == 2 -> TriageStep2Symptoms(
             symptoms = state.symptoms,
             onUpdate = viewModel::updateSymptoms,
-            onNext = viewModel::nextStep
+            onNext = viewModel::nextStep,
+            onBack = { viewModel.goToStep(1) }
         )
         state.currentStep == 3 -> TriageStep3Vitals(
             vitals = state.vitals,
             onUpdate = viewModel::updateVitals,
             onAssess = viewModel::runAssessment,
+            onBack = { viewModel.goToStep(2) },
             isAssessing = state.isAssessing
         )
         else -> {

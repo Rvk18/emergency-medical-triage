@@ -14,6 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.medtriage.app.data.triage.TriageResult
 import com.medtriage.app.ui.components.ConfidenceBar
+import com.medtriage.app.ui.components.TriageStepBar
 import com.medtriage.app.ui.components.SectionCard
 import com.medtriage.app.ui.components.SeverityChip
 import com.medtriage.app.ui.theme.Spacing
@@ -21,14 +22,17 @@ import com.medtriage.app.ui.theme.Spacing
 @Composable
 fun TriageReportScreen(
     result: TriageResult,
-    onProceedToHospitalMatching: () -> Unit
+    onProceedToHospitalMatching: () -> Unit,
+    onBack: () -> Unit
 ) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(Spacing.screenHorizontal)
+            .padding(horizontal = Spacing.screenHorizontal)
             .verticalScroll(rememberScrollState())
     ) {
+        TriageStepBar(stepIndicator = "Report", onBack = onBack)
+        Spacer(Modifier.height(Spacing.space8))
         Text("Triage Report", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onSurface)
         Spacer(Modifier.height(Spacing.sectionGap))
 

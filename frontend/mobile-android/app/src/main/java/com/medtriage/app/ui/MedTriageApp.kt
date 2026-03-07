@@ -12,13 +12,16 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.medtriage.app.ui.auth.AuthViewModel
 import com.medtriage.app.ui.screens.LanguageSelectorScreen
 import com.medtriage.app.ui.screens.LoginScreen
+import com.medtriage.app.ui.screens.RoleSelectorScreen
 import com.medtriage.app.ui.shell.AppShell
 
 @Composable
 fun MedTriageApp(
-    authViewModel: AuthViewModel = hiltViewModel()
+    authViewModel: AuthViewModel = hiltViewModel(),
+    appViewModel: AppViewModel = hiltViewModel()
 ) {
     val authState by authViewModel.authState.collectAsState()
+    val darkTheme by appViewModel.darkTheme.collectAsState(initial = false)
 
     when {
         authState.isLoading -> {
@@ -26,12 +29,24 @@ fun MedTriageApp(
                 CircularProgressIndicator()
             }
         }
+        !authState.hasRoleSelected -> {
+            RoleSelectorScreen(
+                darkTheme = darkTheme,
+                onDarkThemeChange = appViewModel::setDarkTheme,
+                onSelectRole = authViewModel::setUserRole
+            )
+        }
         !authState.isLoggedIn -> {
             LoginScreen(
+                darkTheme = darkTheme,
+                onDarkThemeChange = appViewModel::setDarkTheme,
                 onLoginSuccess = { },
                 onLogin = { email, password, onResult ->
                     authViewModel.login(email, password, onResult)
-                }
+                },
+                onBackToRoleSelection = authViewModel::clearUserRole,
+                onLanguageSelected = authViewModel::selectLanguage,
+                onSettingsClick = { }
             )
         }
         !authState.hasLanguageSelected -> {
@@ -45,7 +60,9 @@ fun MedTriageApp(
             AppShell(
                 isOffline = false,
                 lastSyncTime = null,
-                roleBadge = authState.role
+                roleBadge = if (authState.role == "patient") "Patient" else "Healthcare Worker",
+                userRole = authState.role,
+                onLogout = authViewModel::logout
             )
         }
     }

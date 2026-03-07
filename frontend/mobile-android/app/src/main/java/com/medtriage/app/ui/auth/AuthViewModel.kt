@@ -15,7 +15,8 @@ import javax.inject.Inject
 data class AuthUiState(
     val isLoggedIn: Boolean = false,
     val hasLanguageSelected: Boolean = false,
-    val role: String = "Healthcare Worker",
+    val hasRoleSelected: Boolean = false,
+    val role: String = "healthcare_worker",
     val isLoading: Boolean = true
 )
 
@@ -33,7 +34,8 @@ class AuthViewModel @Inject constructor(
         AuthUiState(
             isLoggedIn = !token.isNullOrBlank(),
             hasLanguageSelected = !language.isNullOrBlank(),
-            role = role ?: "Healthcare Worker",
+            hasRoleSelected = !role.isNullOrBlank(),
+            role = role ?: "healthcare_worker",
             isLoading = false
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), AuthUiState(isLoading = true))
@@ -41,6 +43,18 @@ class AuthViewModel @Inject constructor(
     fun login(emailOrPhone: String, password: String, onResult: (Result<Unit>) -> Unit) {
         viewModelScope.launch {
             onResult(authRepository.login(emailOrPhone, password))
+        }
+    }
+
+    fun setUserRole(role: String) {
+        viewModelScope.launch {
+            userPreferences.setUserRole(role)
+        }
+    }
+
+    fun clearUserRole() {
+        viewModelScope.launch {
+            userPreferences.clearUserRole()
         }
     }
 

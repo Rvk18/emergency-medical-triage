@@ -29,8 +29,8 @@ enum class SyncStatus {
 @Composable
 fun SyncStatusIndicator(
     status: SyncStatus,
-    lastSyncTime: String? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    lastSyncTime: String? = null
 ) {
     val (icon, label, tint) = when (status) {
         SyncStatus.Synced -> Triple(Icons.Default.CloudDone, "Synced", SuccessColor)

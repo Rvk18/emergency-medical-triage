@@ -16,6 +16,7 @@ fun HospitalsFlowScreen(
         state.selectedHospital != null -> NavigationScreen(
             hospital = state.selectedHospital!!,
             steps = state.routeSteps,
+            routeResult = state.routeResult,
             onGenerateHandoff = viewModel::showHandoffReport,
             onChangeHospital = viewModel::changeHospital
         )

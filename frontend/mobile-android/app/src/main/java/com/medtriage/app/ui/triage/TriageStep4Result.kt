@@ -25,13 +25,15 @@ import com.medtriage.app.ui.components.CriticalBanner
 import com.medtriage.app.ui.components.SectionCard
 import com.medtriage.app.ui.components.SectionCardVariant
 import com.medtriage.app.ui.components.SeverityChip
+import com.medtriage.app.ui.components.TriageStepBar
 import com.medtriage.app.ui.theme.Spacing
 
 @Composable
 fun TriageStep4Result(
     result: TriageResult,
     onProceedToReport: () -> Unit,
-    onOverride: () -> Unit
+    onOverride: () -> Unit,
+    onBack: () -> Unit
 ) {
     var showOverrideDialog by remember { mutableStateOf(false) }
     val displaySeverity = if (result.confidencePercent < 85) SeverityLevel.HIGH else result.severity
@@ -54,14 +56,16 @@ fun TriageStep4Result(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(Spacing.screenHorizontal)
+            .padding(horizontal = Spacing.screenHorizontal)
             .verticalScroll(rememberScrollState())
     ) {
+        TriageStepBar(stepIndicator = "Step 4 of 4", onBack = onBack)
+        Spacer(Modifier.height(Spacing.space8))
         if (result.severity == SeverityLevel.CRITICAL) {
             CriticalBanner(message = "CRITICAL — Immediate transport. Do not delay.")
             Spacer(Modifier.height(Spacing.space16))
         }
-        Text("Step 4 of 4 — Result", style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onSurface)
+        Text("Result", style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onSurface)
         Spacer(Modifier.height(Spacing.sectionGap))
 
         SectionCard(title = "Assessment") {

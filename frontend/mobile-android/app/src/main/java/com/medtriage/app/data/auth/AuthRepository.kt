@@ -20,7 +20,7 @@ class AuthRepository @Inject constructor(
                 Result.failure(IllegalArgumentException("Email/phone and password required"))
             } else {
                 userPreferences.setAuthToken("mock_jwt_${System.currentTimeMillis()}")
-                userPreferences.setUserRole("Healthcare Worker")
+                // Role is set in RoleSelector; do not override here
                 Result.success(Unit)
             }
         } catch (e: Exception) {
