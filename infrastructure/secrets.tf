@@ -63,6 +63,26 @@ resource "aws_secretsmanager_secret_version" "eka_config" {
   })
 }
 
+# Google Maps Platform (Directions + Geocoding for routing)
+resource "aws_secretsmanager_secret" "google_maps_config" {
+  count       = var.google_maps_api_key != "" ? 1 : 0
+  name        = "${local.name_prefix}/google-maps-config"
+  description = "Google Maps Platform API key (Directions, Geocoding)"
+
+  tags = {
+    Name    = "${local.name_prefix}-google-maps-config"
+    Project = var.project_name
+  }
+}
+
+resource "aws_secretsmanager_secret_version" "google_maps_config" {
+  count     = var.google_maps_api_key != "" ? 1 : 0
+  secret_id = aws_secretsmanager_secret.google_maps_config[0].id
+  secret_string = jsonencode({
+    api_key = var.google_maps_api_key
+  })
+}
+
 # API and Gateway config - created by Terraform on apply. Scripts read this (no terraform output needed).
 resource "aws_secretsmanager_secret" "api_config" {
   name        = "${local.name_prefix}/api-config"
@@ -85,18 +105,43 @@ resource "aws_secretsmanager_secret" "gateway_config" {
   }
 }
 
+# RMP test user credentials for pipeline testing. Scripts (e.g. get_rmp_token.py) read via boto3; no secrets on CLI.
+resource "aws_secretsmanager_secret" "rmp_test_credentials" {
+  count       = var.rmp_test_password != "" ? 1 : 0
+  name        = "${local.name_prefix}/rmp-test-credentials"
+  description = "Test RMP user email and password for pipeline/curl testing (Cognito). Used by get_rmp_token.py via boto3."
+
+  tags = {
+    Name    = "${local.name_prefix}-rmp-test-credentials"
+    Project = var.project_name
+  }
+}
+
+resource "aws_secretsmanager_secret_version" "rmp_test_credentials" {
+  count     = var.rmp_test_password != "" ? 1 : 0
+  secret_id = aws_secretsmanager_secret.rmp_test_credentials[0].id
+  secret_string = jsonencode({
+    email    = var.rmp_test_email
+    password = var.rmp_test_password
+  })
+}
+
 resource "aws_secretsmanager_secret_version" "api_config" {
   secret_id = aws_secretsmanager_secret.api_config.id
   secret_string = jsonencode({
     api_gateway_url                  = "${aws_api_gateway_stage.main.invoke_url}/"
     api_gateway_health_url           = "${aws_api_gateway_stage.main.invoke_url}/health"
+    cognito_user_pool_id             = aws_cognito_user_pool.rmp.id
+    cognito_app_client_id            = aws_cognito_user_pool_client.rmp_app.id
     gateway_get_hospitals_lambda_arn  = aws_lambda_function.gateway_get_hospitals.arn
     gateway_eka_lambda_arn           = aws_lambda_function.gateway_eka.arn
+    gateway_maps_lambda_arn          = aws_lambda_function.gateway_maps.arn
+    gateway_routing_lambda_arn       = aws_lambda_function.gateway_routing.arn
     region                           = var.aws_region
     api_config_secret_name           = aws_secretsmanager_secret.api_config.name
     gateway_config_secret_name       = aws_secretsmanager_secret.gateway_config.name
     bedrock_config_secret_name       = aws_secretsmanager_secret.bedrock_config.name
     rds_config_secret_name           = aws_secretsmanager_secret.rds_config.name
-    eka_config_secret_name           = one(aws_secretsmanager_secret.eka_config[*].name)
+    eka_config_secret_name           = var.eka_api_key != "" ? aws_secretsmanager_secret.eka_config[0].name : ""
   })
 }

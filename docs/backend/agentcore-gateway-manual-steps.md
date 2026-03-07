@@ -6,8 +6,8 @@ The Gateway itself is not managed by Terraform. Terraform creates the **get_hosp
 
 ## Prerequisites
 
-- Terraform apply completed (creates `gateway-get-hospitals` Lambda)
-- Python 3.10+ with `bedrock-agentcore-starter-toolkit` and `boto3`
+- Terraform apply completed (creates Lambdas including gateway-get-hospitals, gateway-maps, gateway-routing, route)
+- Python 3.10+ with `bedrock-agentcore-starter-toolkit` and `boto3` (use `python3` if `python` is not on PATH, e.g. macOS)
 - AWS credentials configured (`aws configure` or env vars)
 - Region: us-east-1 (or match `terraform.tfvars`)
 
@@ -32,31 +32,34 @@ No Terraform output needed: the script reads Lambda ARNs from the **api_config**
 
 ```bash
 # Option A: load config from secret (boto3), then run setup
-eval $(python scripts/load_api_config.py --exports)
-python scripts/setup_agentcore_gateway.py
+eval $(python3 scripts/load_api_config.py --exports)
+python3 scripts/setup_agentcore_gateway.py
 
 # Option B: run with no args; script reads api_config secret via boto3
-python scripts/setup_agentcore_gateway.py
+python3 scripts/setup_agentcore_gateway.py
 ```
 
-To pass ARNs explicitly: `GATEWAY_GET_HOSPITALS_LAMBDA_ARN`, `GATEWAY_EKA_LAMBDA_ARN`, or first arg and `--eka <arn>`. Use `--gateway-id <id>` when reusing an existing Gateway.
+To pass ARNs explicitly: `GATEWAY_GET_HOSPITALS_LAMBDA_ARN`, `GATEWAY_EKA_LAMBDA_ARN`, `GATEWAY_MAPS_LAMBDA_ARN`, `GATEWAY_ROUTING_LAMBDA_ARN`, or first arg and `--eka <arn>`, `--maps <arn>`, `--routing <arn>`. Use `--gateway-id <id>` when reusing an existing Gateway.
 
 The script will:
 
-1. Create Cognito OAuth authorizer
-2. Create MCP Gateway with Cognito auth
+1. Create Cognito OAuth authorizer (or reuse when Gateway already exists: **syncs Gateway authorizer** to current OAuth so tokens from the saved client_info work)
+2. Create MCP Gateway with Cognito auth (or reuse existing)
 3. Add the get_hospitals Lambda as a target with tool schema
-4. Add Lambda permission for the Gateway execution role
-5. Save **full config (including client_info)** to **Secrets Manager** (`{prefix}/gateway-config`). Save only non-sensitive fields to `gateway_config.json` (no OAuth in code).
+4. Optionally add Eka, Maps, and Routing targets
+5. Add Lambda permission for the Gateway execution role
+6. Save **full config (including client_info)** to **Secrets Manager** (`{prefix}/gateway-config`). Save only non-sensitive fields to `gateway_config.json` (no OAuth in code).
+
+**Important:** When the Gateway already exists, the script updates the Gateway's authorizer to the current OAuth (discovery URL, allowed clients, scope). This avoids "Invalid Bearer token" when the Route Lambda (or other callers) use the client_info from the secret. MCP protocol version used by the Gateway is **2025-03-26** (Route Lambda sends this header).
 
 ## Step 4: Use the Gateway
 
 - **MCP URL**: From Secrets Manager **gateway-config** secret → `gateway_url`, or from local `gateway_config.json` (non-sensitive only)
-- **Auth**: From Secrets Manager **gateway-config** → `client_info` (client_id, client_secret, token_endpoint, scope). Use `eval $(python scripts/load_gateway_config.py)` to export env vars.
+- **Auth**: From Secrets Manager **gateway-config** → `client_info` (client_id, client_secret, token_endpoint, **scope**). Use `eval $(python3 scripts/load_gateway_config.py)` to export env vars. The Route Lambda uses `client_info.scope` (e.g. `emergency-triage-hospitals/invoke`) when requesting a token.
 
 ### Step 4b: Wire Hospital Matcher agent to Gateway (optional)
 
-To have the agent use the Gateway instead of in-agent synthetic data, set these **environment variables on the AgentCore Runtime** (e.g. in AWS Console → Bedrock AgentCore → your runtime). Values come from **Secrets Manager** (gateway-config secret). Easiest: run `eval $(python scripts/load_gateway_config.py)` locally, then copy the exported values into the runtime env in the Console:
+To have the agent use the Gateway instead of in-agent synthetic data, set these **environment variables on the AgentCore Runtime** (e.g. in AWS Console → Bedrock AgentCore → your runtime). Values come from **Secrets Manager** (gateway-config secret). Easiest: run `eval $(python3 scripts/load_gateway_config.py)` locally, then copy the exported values into the runtime env in the Console:
 
 - `GATEWAY_MCP_URL` = `gateway_url` from secret
 - `GATEWAY_CLIENT_ID` = `client_info.client_id`

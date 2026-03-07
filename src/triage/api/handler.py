@@ -12,11 +12,26 @@ from triage.models.triage import TriageRequest
 logger = logging.getLogger(__name__)
 
 
+def _rmp_from_event(event: dict) -> str | None:
+    """Extract RMP identifier from API Gateway Cognito authorizer. Returns sub or email for audit."""
+    try:
+        auth = (event.get("requestContext") or {}).get("authorizer") or {}
+        if not isinstance(auth, dict):
+            return None
+        # Cognito can pass claims at top level or under "claims"
+        sub = auth.get("sub") or (auth.get("claims") or {}).get("sub")
+        email = auth.get("email") or (auth.get("claims") or {}).get("email")
+        return sub or email
+    except Exception:
+        return None
+
+
 def handler(event: dict, context: object) -> dict:
     """
     API Gateway Lambda proxy handler for POST /triage.
+    RMP auth: Cognito User Pool authorizer; claims available in event.requestContext.authorizer.claims.
     Expects body: {"symptoms": ["..."], "vitals": {...}, "age_years": int?, "sex": str?, "submitted_by": str?, "session_id": str?, "patient_id": str?}
-    Optional session_id: reuse same AgentCore session across triage → hospitals → route (AC-3 memory). Response includes session_id (echo or generated).
+    If submitted_by omitted, uses Cognito sub (or email) from token for audit.
     """
     try:
         if event.get("httpMethod") != "POST":
@@ -28,6 +43,11 @@ def handler(event: dict, context: object) -> dict:
         # Accept rmp_id as alias for submitted_by
         if "rmp_id" in body and "submitted_by" not in body:
             body = {**body, "submitted_by": body["rmp_id"]}
+        # RMP auth: use Cognito identity when submitted_by not in body
+        if body.get("submitted_by") is None:
+            rmp = _rmp_from_event(event)
+            if rmp:
+                body = {**body, "submitted_by": rmp}
 
         request = TriageRequest.model_validate(body)
     except Exception as e:

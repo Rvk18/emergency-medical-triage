@@ -110,6 +110,17 @@ This doc matches the backend implementation and what the mobile app must send/re
 
 ---
 
+## POST /route (real directions)
+
+After triage and hospital selection, use **POST /route** to get **real driving directions** (distance, duration, Google Maps URL). Full request/response and flow are documented in [API-Integration-Guide.md](./API-Integration-Guide.md).
+
+- **URL:** `{BASE_URL}/route`
+- **Auth:** Same as triage/hospitals: `Authorization: Bearer <IdToken>`.
+- **Body:** `origin` and `destination`, each either `{ "lat", "lon" }` or `{ "address": "..." }`.
+- **Response:** `distance_km`, `duration_minutes`, `directions_url` (open in Google Maps on mobile or web).
+
+---
+
 ## Tracking session_id from the frontend (AC-3)
 
 To keep **one AgentCore session** (and short-term memory) across **triage → hospital match → route**, the frontend must send the same `session_id` on each API call. Backend requires `session_id` to be **at least 33 characters** (e.g. a UUID).

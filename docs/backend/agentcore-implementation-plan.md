@@ -50,6 +50,9 @@
 
 ## Architecture (Target)
 
+- **Multi-agent:** Hospital Matcher can call the **Routing** agent via Gateway tool `get_route`. Routing may use **Google Maps** (Lambda Gateway target) for directions/ETA.
+- **Tracing:** Every agent (Triage, Hospital Matcher, Routing) emits `source=`, `duration_ms=`, `request_id=` for observability.
+
 ```
                     ┌─────────────────────────────────────────┐
                     │           API Gateway                    │
@@ -132,13 +135,18 @@
 
 ### Phase AC-4: Routing + Identity
 
-**Goal:** Add Routing agent; enable Identity for RMP auth.
+**Goal:** Add Routing as a **multi-agent** flow (Hospital Matcher calls Routing via Gateway); optional Google Maps MCP; tracing in every agent; hardened guardrails and policies.
+
+**Design:** See [AC4-Routing-Identity-Design.md](./AC4-Routing-Identity-Design.md).
 
 **Deliverables:**
-- [ ] Routing agent on AgentCore Runtime
-- [ ] POST /route endpoint
-- [ ] AgentCore Identity: Cognito/IdP integration for RMP
-- [ ] Policy (if GA): stricter agent action boundaries
+- [ ] **Routing agent** on AgentCore Runtime (`agentcore/agent/routing_agent.py`); uses Gateway tool for directions/ETA (Google Maps Lambda target when configured).
+- [ ] **Gateway:** routing target (tool `get_route`); optional **Google Maps** target (Lambda calling Directions API, key in Secrets Manager).
+- [ ] **Multi-agent:** Hospital Matcher agent has `get_route_tool` that calls Gateway → Routing; can return hospitals + per-hospital route info when patient location provided.
+- [ ] **POST /route** endpoint: Lambda invokes Routing agent; same tracing pattern (source=, duration_ms=, request_id).
+- [ ] **Tracing and log delivery in every agent:** Triage, Hospital Matcher, Routing all emit source=, duration_ms=, request_id=; documented in [OBSERVABILITY.md](./OBSERVABILITY.md).
+- [ ] **Guardrails and policy (G1–G3 + Policy):** Input/output validation and safety prompts for all agents; AgentCore Policy (when GA) for stricter action boundaries.
+- [ ] **Identity:** Cognito/IdP integration for RMP when frontend ready.
 
 ---
 
@@ -158,7 +166,7 @@
 | AC-1 | Runtime + Gateway + Hospital Matcher + Eka (A,B,C) | ✅ Done | None |
 | **AC-2** | Triage on AgentCore + Observability | **In progress** | AC-1 |
 | **AC-3** | Memory + Hospital MCP | **In progress** | AC-1, AC-2 |
-| **AC-4** | Routing + Identity | Pending | AC-1 |
+| **AC-4** | Routing + Identity (multi-agent, Google Maps MCP, tracing, guardrails) | Pending | AC-1 |
 
 ---
 
@@ -166,7 +174,7 @@
 
 1. **AC-2** – Triage agent on AgentCore Runtime; full observability (traces, CloudWatch dashboards, medical audit); POST /triage invokes AgentCore; persist to Aurora unchanged.
 2. **AC-3** – AgentCore Memory (short/long-term); Hospital Matcher uses Gateway/MCP tools; patient context across triage → hospital → routing.
-3. **AC-4** – Routing agent on AgentCore Runtime; POST /route; AgentCore Identity (Cognito/IdP for RMP); Policy (if GA).
+3. **AC-4** – Routing agent on AgentCore Runtime (multi-agent: Hospital Matcher calls Routing via Gateway); POST /route; optional Google Maps MCP; tracing in every agent; guardrails G1–G3 + Policy; AgentCore Identity (Cognito/IdP for RMP).
 
 ---
 

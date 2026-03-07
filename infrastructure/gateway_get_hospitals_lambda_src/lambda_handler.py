@@ -3,16 +3,35 @@ AgentCore Gateway Lambda handler for get_hospitals tool.
 
 Event: tool input props (severity, limit).
 Context: bedrockAgentCoreToolName in client_context.custom (format: TARGET___tool_name).
-Returns: synthetic Indian hospital data matching agentcore/agent/synthetic_hospitals.py.
+Returns: hospital data (Bangalore/Chennai seed when available, else synthetic).
 """
 
 import json
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 
 DELIMITER = "___"
 SAFETY_DISCLAIMER = "Hospital availability may change. Confirm with facility before transport."
+
+_HOSPITALS_SEED: list | None = None
+
+
+def _load_seed_hospitals() -> list:
+    global _HOSPITALS_SEED
+    if _HOSPITALS_SEED is not None:
+        return _HOSPITALS_SEED
+    try:
+        p = os.path.join(os.path.dirname(__file__), "hospitals_bangalore_chennai.json")
+        if os.path.isfile(p):
+            with open(p) as f:
+                _HOSPITALS_SEED = json.load(f)
+            return _HOSPITALS_SEED or []
+    except Exception as e:
+        logger.warning("Could not load seed hospitals: %s", e)
+    _HOSPITALS_SEED = []
+    return []
 
 HOSPITAL_POOL = {
     "critical": [
@@ -39,7 +58,24 @@ HOSPITAL_POOL = {
 
 
 def get_synthetic_hospitals(severity: str, limit: int = 3) -> dict:
-    """Return synthetic hospital matches for the given severity."""
+    """Return hospital matches. Prefer Bangalore/Chennai seed data; fall back to synthetic."""
+    seed = _load_seed_hospitals()
+    if seed:
+        # Use seed: add match_score and match_reasons by severity
+        scores = {"critical": 0.95, "high": 0.9, "medium": 0.85, "low": 0.8}
+        score = scores.get((severity or "medium").lower(), 0.85)
+        hospitals = []
+        for i, h in enumerate(seed[: min(limit, len(seed))]):
+            hospitals.append({
+                "hospital_id": h.get("hospital_id", f"seed-{i}"),
+                "name": h.get("name", "Hospital"),
+                "match_score": score - (i * 0.02),
+                "match_reasons": ["24/7 Emergency", f"City: {h.get('city', '')}"],
+                "lat": h.get("lat"),
+                "lon": h.get("lon"),
+            })
+        return {"hospitals": hospitals, "safety_disclaimer": SAFETY_DISCLAIMER}
+    # Fallback: original synthetic pool
     severity_key = (severity or "medium").lower()
     pool = HOSPITAL_POOL.get(severity_key, HOSPITAL_POOL["medium"])
     selected = pool[: min(limit, len(pool))]

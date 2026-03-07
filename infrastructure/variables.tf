@@ -105,9 +105,38 @@ variable "triage_agent_runtime_arn" {
   default     = ""
 }
 
+variable "routing_agent_runtime_arn" {
+  description = "AgentCore Runtime ARN for Routing agent (from agentcore deploy --entrypoint routing_agent.py)"
+  type        = string
+  default     = ""
+}
+
 # Eka Care API (for Eka MCP - Indian drugs, treatment protocols)
 variable "eka_api_key" {
   description = "Eka Care API key (from console.eka.care). Stored in Secrets Manager."
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+# Google Maps API (Directions + Geocoding for routing – Bangalore/Chennai)
+variable "google_maps_api_key" {
+  description = "Google Maps Platform API key (Directions, Geocoding). Stored in Secrets Manager. Leave empty for stub routing."
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+# RMP test user for pipeline/curl testing. Stored in Secrets Manager; scripts use boto3 to get token (no secrets on CLI).
+variable "rmp_test_email" {
+  description = "Email of test RMP user in Cognito (for get_rmp_token.py). Stored in Secrets Manager."
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "rmp_test_password" {
+  description = "Password of test RMP user (for get_rmp_token.py). Stored in Secrets Manager only."
   type        = string
   default     = ""
   sensitive   = true
