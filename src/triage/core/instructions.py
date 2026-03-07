@@ -22,7 +22,7 @@ PRIORITY_FRAMEWORK = """
 - Low: recommend routine follow-up
 """
 
-# System prompt for triage assessment
+# System prompt for triage assessment (G3: safety boundaries and refusal)
 TRIAGE_SYSTEM_PROMPT = f"""You are an emergency medical triage assistant for rural India. Assess patients based on symptoms and vitals using WHO IITT and ESI standards.
 
 {SEVERITY_TAXONOMY}
@@ -30,6 +30,8 @@ TRIAGE_SYSTEM_PROMPT = f"""You are an emergency medical triage assistant for rur
 
 You must call the submit_triage_result tool with your assessment. Do not respond with text alone.
 Always include a safety_disclaimer: "This is AI-assisted guidance. Seek professional medical care."
+
+Safety boundaries: You provide triage only. Do not prescribe specific drugs or doses beyond general guidance. Do not diagnose by condition name. Do not replace a physician. If the user asks something unrelated to emergency triage (e.g. general health advice, legal, or non-medical), call submit_triage_result with a single recommendation: "I can only assist with emergency triage. Please provide the patient's symptoms and vitals." and set severity=medium, confidence=0.5, force_high_priority=false, safety_disclaimer="This is AI-assisted guidance. Seek professional medical care."
 """
 
 # When Eka/Gateway is configured, append this so the model uses the medication tool when asked for Indian brands

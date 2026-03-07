@@ -15,7 +15,9 @@ import urllib.parse
 import http.client
 import ssl
 
-logger = logging.getLogger(__name__)
+# G1: Input validation
+ADDRESS_MAX_LENGTH = 500
+DIRECTIONS_URL_MAX_LENGTH = 2000
 
 MAPS_TOOL_NAME = "maps-target___get_directions"
 ROUTING_TOOL_NAME = "routing-target___get_route"
@@ -109,12 +111,31 @@ def _call_get_directions(config: dict, args: dict) -> dict:
             first = res["content"][0]
             if isinstance(first, dict) and first.get("type") == "text" and "text" in first:
                 try:
-                    return json.loads(first["text"])
+                    return _sanitize_route_result(json.loads(first["text"]))
                 except json.JSONDecodeError:
                     pass
         if "structuredContent" in res and isinstance(res["structuredContent"], dict):
-            return res["structuredContent"]
-    return res if isinstance(res, dict) else {}
+            return _sanitize_route_result(res["structuredContent"])
+    return _sanitize_route_result(res) if isinstance(res, dict) else {}
+
+
+def _sanitize_route_result(data: dict) -> dict:
+    """G2: Validate and cap route response shape."""
+    if not isinstance(data, dict):
+        return {"distance_km": None, "duration_minutes": None, "directions_url": None}
+    out = {}
+    d = data.get("distance_km")
+    out["distance_km"] = float(d) if d is not None and isinstance(d, (int, float)) else None
+    dur = data.get("duration_minutes")
+    out["duration_minutes"] = int(dur) if dur is not None and isinstance(dur, (int, float)) else None
+    url = data.get("directions_url")
+    if url is not None and isinstance(url, str):
+        out["directions_url"] = url[:DIRECTIONS_URL_MAX_LENGTH] if len(url) > DIRECTIONS_URL_MAX_LENGTH else url
+    else:
+        out["directions_url"] = None
+    if data.get("stub") is True:
+        out["stub"] = True
+    return out
 
 
 def _rmp_from_event(event: dict) -> str | None:
@@ -139,6 +160,8 @@ def handler(event: dict, context: object) -> dict:
         body = event.get("body") or "{}"
         if isinstance(body, str):
             body = json.loads(body)
+        if not body or not isinstance(body, dict):
+            return _response(400, {"error": "Request body must be a non-empty JSON object"})
         origin = body.get("origin") or {}
         destination = body.get("destination") or {}
         if not isinstance(origin, dict) or not isinstance(destination, dict):
@@ -149,14 +172,20 @@ def handler(event: dict, context: object) -> dict:
             args["origin_lat"] = float(origin["lat"])
             args["origin_lon"] = float(origin["lon"])
         elif origin.get("address"):
-            args["origin_address"] = str(origin["address"]).strip()
+            addr = str(origin["address"]).strip()
+            if len(addr) > ADDRESS_MAX_LENGTH:
+                return _response(400, {"error": f"origin address must be at most {ADDRESS_MAX_LENGTH} characters"})
+            args["origin_address"] = addr
         else:
             return _response(400, {"error": "origin must have lat+lon or address"})
         if destination.get("lat") is not None and destination.get("lon") is not None:
             args["dest_lat"] = float(destination["lat"])
             args["dest_lon"] = float(destination["lon"])
         elif destination.get("address"):
-            args["dest_address"] = str(destination["address"]).strip()
+            addr = str(destination["address"]).strip()
+            if len(addr) > ADDRESS_MAX_LENGTH:
+                return _response(400, {"error": f"destination address must be at most {ADDRESS_MAX_LENGTH} characters"})
+            args["dest_address"] = addr
         else:
             return _response(400, {"error": "destination must have lat+lon or address"})
         # Validate ranges
