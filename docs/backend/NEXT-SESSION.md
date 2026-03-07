@@ -1,30 +1,27 @@
 # What to work on next (next session)
 
-**Branch to create:** Start from `main`, then create a new feature branch.  
-**Current branch:** `feature/ac4-continue` (created; use this for tomorrow’s work).
-
-**Current state (as of merge):**
-- **AC-4 routing pipeline is working:** POST /route returns **real directions** when Google Maps API key is set in Secrets Manager: `distance_km`, `duration_minutes`, `directions_url` (no `stub: true`). Fallback stub when key is not set. Full flow: RMP auth → Route Lambda → AgentCore Gateway (OAuth + MCP 2025-03-26) → maps-target___get_directions → Maps Lambda (Google Routes API v2).
-- **Triage, Hospitals, Route** all tested with curl; see [TESTING-Pipeline-curl.md](./TESTING-Pipeline-curl.md). Use `python3 scripts/get_rmp_token.py` for token (not `python` on macOS).
-- **Frontend:** [API-Integration-Guide.md](../frontend/API-Integration-Guide.md) documents for mobile & web: base URL, auth, triage → hospitals → route, and real directions (POST /route).
+**Current sequence:** See **[ROADMAP-NEXT.md](../ROADMAP-NEXT.md)** for the full order:  
+**1** ~~Redeploy AgentCore~~ ✅ Done → **2** Policy (when GA) → **3** HIPAA H1–H4 → **4** AC-3 re-test → **5** Deploy web app + frontend–backend integration.
 
 ---
 
-## Immediate next steps (pick one or more)
+## Phase 1: Redeploy AgentCore ✅ Done
 
-1. **Enable real Google Maps directions** *(done when API key is in Secrets Manager)*
-   - Add Google Maps API key to Secrets Manager (secret name in `GOOGLE_MAPS_CONFIG_SECRET_NAME`; shape `{"api_key":"YOUR_KEY"}`). See [GOOGLE-MAPS-ACCOUNT-SETUP.md](../infrastructure/GOOGLE-MAPS-ACCOUNT-SETUP.md).
-   - With key set, POST /route returns real `distance_km`, `duration_minutes`, `directions_url`. Frontend guide: [API-Integration-Guide.md](../frontend/API-Integration-Guide.md).
+Redeployed all three runtimes (Hospital Matcher, Triage + enable_eka_on_runtime, Routing). G3 safety prompts are live; Eka remains enabled on triage.
 
-2. **Eka validation (ROADMAP E1–E5)**
-   - **E1–E3 done:** Runbook and response shape doc: [EKA-VALIDATION-RUNBOOK.md](./EKA-VALIDATION-RUNBOOK.md). Use it to confirm Eka config/secret, run direct Lambda test (E2), and interpret stub vs real. E4–E5: triage flow that uses Eka; decide “useful” bar and document.
-   - See [ROADMAP-after-AC4.md](./ROADMAP-after-AC4.md) §3.
+---
 
-3. **Guardrails & compliance (AC-4 scope)**
-   - G1–G3 (input/output validation, safety prompts), Policy. See [AC4-Routing-Identity-Design.md](./AC4-Routing-Identity-Design.md) and [ROADMAP-after-AC4.md](./ROADMAP-after-AC4.md) §2.
+## Phases 2–4: Policy, HIPAA, AC-3
 
-4. **HIPAA / health data (H1–H4)**
-   - Document PHI scope, encryption, access, audit. See [ROADMAP-after-AC4.md](./ROADMAP-after-AC4.md) §1.
+- **2. Policy:** When AgentCore Policy is GA, restrict tools per agent; document in runbook. [AC4-Routing-Identity-Design.md](./AC4-Routing-Identity-Design.md) §4.
+- **3. HIPAA (H1–H4):** Document PHI scope, encryption, access, audit. [ROADMAP-after-AC4.md](./ROADMAP-after-AC4.md) §1.
+- **4. AC-3 re-test:** Same `session_id` on triage and hospitals; [TESTING-Pipeline-curl.md](./TESTING-Pipeline-curl.md).
+
+---
+
+## Phase 5: Deploy web app + frontend integration
+
+Deploy `frontend/web/` and wire it to the backend: API URL, Cognito auth, triage → hospitals → route flow, session_id. Full checklist: [ROADMAP-NEXT.md](../ROADMAP-NEXT.md) § Phase 5.
 
 ---
 
@@ -32,13 +29,14 @@
 
 | Doc | Purpose |
 |-----|--------|
-| [TODO.md](./TODO.md) | Backend TODO and phase status |
-| [EKA-VALIDATION-RUNBOOK.md](./EKA-VALIDATION-RUNBOOK.md) | Eka E1–E5: config check, direct Lambda test, response shape, stub vs real |
-| [EKA-MCP-ROADMAP.md](./EKA-MCP-ROADMAP.md) | Eka MCP: what we have (medications, protocols, publishers, pharmacology) and what we can add (e.g. SNOMED) |
-| [ROADMAP-after-AC4.md](./ROADMAP-after-AC4.md) | Post AC-4 roadmap (Eka, HIPAA, guardrails) |
-| [TESTING-Pipeline-curl.md](./TESTING-Pipeline-curl.md) | Curl tests for triage → hospitals → route |
+| [ROADMAP-NEXT.md](../ROADMAP-NEXT.md) | Phases 1–5: Redeploy AgentCore → Policy → HIPAA → AC-3 → Web app + integration |
+| [TODO.md](./TODO.md) | Backend TODO and status |
+| [AC4-Routing-Identity-Design.md](./AC4-Routing-Identity-Design.md) | §4: G1–G3 implementation notes |
+| [ROADMAP-after-AC4.md](./ROADMAP-after-AC4.md) | §2: Guardrails; §1: HIPAA |
+| [TESTING-Pipeline-curl.md](./TESTING-Pipeline-curl.md) | Curl tests; use same session_id for AC-3 re-test |
+| [EKA-VALIDATION-RUNBOOK.md](./EKA-VALIDATION-RUNBOOK.md) | Eka E1–E5 (done; reference) |
 | [agentcore-gateway-manual-steps.md](./agentcore-gateway-manual-steps.md) | Gateway setup; use `python3` for scripts |
-| [GOOGLE-MAPS-ACCOUNT-SETUP.md](../infrastructure/GOOGLE-MAPS-ACCOUNT-SETUP.md) | Google Maps API key setup |
+| [GOOGLE-MAPS-ACCOUNT-SETUP.md](../infrastructure/GOOGLE-MAPS-ACCOUNT-SETUP.md) | Google Maps API key (done; reference) |
 
 ---
 
