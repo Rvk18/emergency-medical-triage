@@ -1,6 +1,14 @@
 # Google Maps Platform – account and API key setup
 
-**Purpose:** Create a Google Cloud project, enable Maps APIs (Directions, Geocoding), and get an API key so the backend can use real routing and geocoding (Bangalore/Chennai). After this, add the key to Terraform and re-run Gateway setup.
+**Purpose:** Create a Google Cloud project, enable Maps APIs (Directions, Geocoding), and get an API key so the backend can return **directions_url** (the Google Maps link users click to open turn-by-turn directions). The key is stored in Secrets Manager; the **gateway_maps** Lambda reads it and builds the URL.
+
+---
+
+## Where the directions URL comes from
+
+- **`directions_url`** is a link like `https://www.google.com/maps/dir/?api=1&origin=12.97,77.59&destination=12.8967,77.5982&travelmode=driving`. It is built by the **gateway_maps** Lambda using your Google Maps API key (Routes API for distance/duration; the URL is a standard Google Maps deep link).
+- **POST /route** – The Route Lambda calls the Gateway tool **maps-target___get_directions** → gateway_maps Lambda → returns `distance_km`, `duration_minutes`, **directions_url**. So the URL appears in the /route response when the Gateway and maps Lambda are configured and the API key is set in Terraform.
+- **POST /hospitals** (with `patient_location_lat` / `patient_location_lon`) – The Hospital Matcher agent calls **routing-target___get_route** → gateway_routing Lambda invokes the **Routing AgentCore runtime** → the Routing agent calls **maps-target___get_directions** → gateway_maps Lambda returns the same fields. So each hospital in the response can have **directions_url** (and distance/duration) only if the **Routing runtime** has Gateway env vars set (so it can call maps-target). Running `setup_agentcore_gateway.py` (without `--skip-runtime-env`) sets Gateway env on both Hospital Matcher and **Routing** runtimes so this chain works.
 
 ---
 

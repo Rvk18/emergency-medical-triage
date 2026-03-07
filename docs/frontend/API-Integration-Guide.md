@@ -162,5 +162,8 @@ Always send `Authorization: Bearer <IdToken>` for POST /triage, /hospitals, /rou
 |-----|--------|
 | [RMP-AUTH.md](./RMP-AUTH.md) | Cognito sign-in, Amplify/Cognito SDK, getting Id Token |
 | [triage-api-contract.md](./triage-api-contract.md) | Full triage request/response, session_id, Eka behavior, mobile mapping |
+| [Hospital-Matcher-API.md](./Hospital-Matcher-API.md) | **POST /hospitals** contract – request/response, patient location, directions_url per hospital |
+| [Route-API.md](./Route-API.md) | **POST /route** contract – origin/destination, distance_km, duration_minutes, directions_url |
+| [openapi.yaml](../openapi.yaml) | **Full Swagger/OpenAPI 3.0** – all endpoints, schemas, auth; use for codegen or Swagger UI |
 | [TESTING-Pipeline-curl.md](../backend/TESTING-Pipeline-curl.md) | Curl examples for the full pipeline (backend/testing) |
 | [TESTING-Gateway-Eka.md](../backend/TESTING-Gateway-Eka.md) | Eka triage test cases (medications, protocols) for demo/QA |

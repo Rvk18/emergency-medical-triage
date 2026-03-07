@@ -4,11 +4,15 @@ Setup AgentCore Gateway with get_hospitals tool.
 
 Uses bedrock_agentcore_starter_toolkit GatewayClient to create MCP Gateway with
 Cognito OAuth, adds our Lambda as target with get_hospitals tool schema,
-and saves gateway_config.json.
+and saves gateway_config to Secrets Manager.
+
+By default, also sets Gateway env vars on the Hospital Matcher AgentCore runtime
+(so POST /hospitals uses get_hospitals and get_route without a separate step).
+Use --skip-runtime-env to only configure the Gateway.
 
 Prerequisites:
   - pip install bedrock-agentcore-starter-toolkit boto3
-  - Terraform apply (creates Lambdas and api_config secret)
+  - Terraform apply (creates Lambdas and api_config secret, including agent_runtime_arn when use_agentcore=true)
   - Lambda ARN: from env GATEWAY_GET_HOSPITALS_LAMBDA_ARN, first arg, or api_config secret
 
 Usage:
@@ -649,7 +653,102 @@ def setup_gateway() -> dict:
     print("Local gateway_config.json has no secrets; use load_gateway_config.py to export env vars.")
     print("=" * 60)
 
+    # Set Gateway env vars on Hospital Matcher runtime by default (so it uses get_hospitals + get_route)
+    if "--skip-runtime-env" not in sys.argv:
+        _set_gateway_env_on_hospital_matcher_runtime(config)
+        _set_gateway_env_on_routing_runtime(config)
+
     return config
+
+
+def _set_gateway_env_on_routing_runtime(gateway_config: dict) -> None:
+    """Set Gateway env vars on the Routing AgentCore runtime so it can call maps-target (Google Maps) for directions_url."""
+    api_cfg = _load_api_config_from_secret()
+    if not api_cfg:
+        return
+    arn = (api_cfg.get("routing_agent_runtime_arn") or "").strip()
+    if not arn:
+        return
+    client_info = gateway_config.get("client_info") or {}
+    if not isinstance(client_info, dict) or not client_info.get("client_id"):
+        return
+    gateway_vars = {
+        "GATEWAY_MCP_URL": (gateway_config.get("gateway_url") or "").strip(),
+        "GATEWAY_CLIENT_ID": (client_info.get("client_id") or "").strip(),
+        "GATEWAY_CLIENT_SECRET": (client_info.get("client_secret") or "").strip(),
+        "GATEWAY_TOKEN_ENDPOINT": (client_info.get("token_endpoint") or "").strip(),
+        "GATEWAY_SCOPE": (client_info.get("scope") or "bedrock-agentcore-gateway").strip() or "bedrock-agentcore-gateway",
+    }
+    if not gateway_vars.get("GATEWAY_MCP_URL"):
+        return
+    runtime_id = arn.split("runtime/")[-1].strip() if "/" in arn else arn
+    try:
+        control = boto3.client("bedrock-agentcore-control", region_name=REGION)
+        current = control.get_agent_runtime(agentRuntimeId=runtime_id)
+        existing = current.get("environmentVariables") or {}
+        merged = {**existing, **gateway_vars}
+        control.update_agent_runtime(
+            agentRuntimeId=runtime_id,
+            agentRuntimeArtifact=current["agentRuntimeArtifact"],
+            networkConfiguration=current["networkConfiguration"],
+            roleArn=current["roleArn"],
+            environmentVariables=merged,
+        )
+        logger.info("Set Gateway env vars on Routing runtime %s (get_directions -> maps-target -> directions_url)", runtime_id)
+        print("Routing runtime configured to use Gateway (maps-target) for directions_url.")
+    except ClientError as e:
+        if e.response["Error"]["Code"] == "AccessDeniedException":
+            logger.warning("No permission to UpdateAgentRuntime for Routing; directions_url may be null until runtime has Gateway env")
+        else:
+            logger.warning("Could not set Gateway env on Routing runtime %s: %s", runtime_id, e)
+    except Exception as e:
+        logger.warning("Could not set Gateway env on Routing runtime: %s", e)
+
+
+def _set_gateway_env_on_hospital_matcher_runtime(gateway_config: dict) -> None:
+    """Set Gateway env vars on the Hospital Matcher AgentCore runtime so it uses Gateway tools by default."""
+    api_cfg = _load_api_config_from_secret()
+    if not api_cfg:
+        return
+    arn = (api_cfg.get("agent_runtime_arn") or "").strip()
+    if not arn:
+        logger.info("api_config has no agent_runtime_arn; skipping Hospital Matcher runtime env (run enable_gateway_on_hospital_matcher_runtime.py if needed)")
+        return
+    client_info = gateway_config.get("client_info") or {}
+    if not isinstance(client_info, dict) or not client_info.get("client_id"):
+        logger.warning("Gateway config has no client_info; cannot set runtime env")
+        return
+    gateway_vars = {
+        "GATEWAY_MCP_URL": (gateway_config.get("gateway_url") or "").strip(),
+        "GATEWAY_CLIENT_ID": (client_info.get("client_id") or "").strip(),
+        "GATEWAY_CLIENT_SECRET": (client_info.get("client_secret") or "").strip(),
+        "GATEWAY_TOKEN_ENDPOINT": (client_info.get("token_endpoint") or "").strip(),
+        "GATEWAY_SCOPE": (client_info.get("scope") or "bedrock-agentcore-gateway").strip() or "bedrock-agentcore-gateway",
+    }
+    if not gateway_vars.get("GATEWAY_MCP_URL"):
+        return
+    runtime_id = arn.split("runtime/")[-1].strip() if "/" in arn else arn
+    try:
+        control = boto3.client("bedrock-agentcore-control", region_name=REGION)
+        current = control.get_agent_runtime(agentRuntimeId=runtime_id)
+        existing = current.get("environmentVariables") or {}
+        merged = {**existing, **gateway_vars}
+        control.update_agent_runtime(
+            agentRuntimeId=runtime_id,
+            agentRuntimeArtifact=current["agentRuntimeArtifact"],
+            networkConfiguration=current["networkConfiguration"],
+            roleArn=current["roleArn"],
+            environmentVariables=merged,
+        )
+        logger.info("Set Gateway env vars on Hospital Matcher runtime %s (get_hospitals + get_route will use Gateway)", runtime_id)
+        print("Hospital Matcher runtime configured to use Gateway (no need to run enable_gateway_on_hospital_matcher_runtime.py).")
+    except ClientError as e:
+        if e.response["Error"]["Code"] == "AccessDeniedException":
+            logger.warning("No permission to UpdateAgentRuntime; run python3 scripts/enable_gateway_on_hospital_matcher_runtime.py after deploy")
+        else:
+            logger.warning("Could not set Gateway env on runtime %s: %s", runtime_id, e)
+    except Exception as e:
+        logger.warning("Could not set Gateway env on Hospital Matcher runtime: %s", e)
 
 
 if __name__ == "__main__":

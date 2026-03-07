@@ -16,7 +16,7 @@ MATCH_REASON_MAX_LENGTH = 200
 
 
 class MatchedHospital(BaseModel):
-    """A single hospital match recommendation. G2: max lengths."""
+    """A single hospital match recommendation. G2: max lengths. Optional route info when patient location provided."""
 
     hospital_id: str = Field(..., max_length=64, description="Hospital identifier")
     name: str = Field(..., max_length=HOSPITAL_NAME_MAX_LENGTH, description="Hospital name")
@@ -24,6 +24,10 @@ class MatchedHospital(BaseModel):
     match_reasons: list[str] = Field(default_factory=list, max_length=MATCH_REASONS_MAX_ITEMS)
     estimated_minutes: int | None = Field(default=None, ge=0)
     specialties: list[str] = Field(default_factory=list, max_length=20)
+    # Route info (from get_route_tool when patient location provided)
+    distance_km: float | None = Field(default=None, ge=0)
+    duration_minutes: float | None = Field(default=None, ge=0)
+    directions_url: str | None = Field(default=None, max_length=2048)
 
     @field_validator("match_reasons", mode="before")
     @classmethod
