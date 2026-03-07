@@ -32,7 +32,7 @@ We **augment RMPs** (not replace them) with:
 | **POST /hospitals** | Severity + recommendations → list of hospitals (name, match_score, lat/lon). Optional patient location for distance. |
 | **POST /route** | Origin + destination (lat/lon or address) → `distance_km`, `duration_minutes`, `directions_url` (open in Google Maps). |
 | **RMP auth** | Cognito Id Token; all POST (except /health) require `Authorization: Bearer <IdToken>`. |
-| **Eka on triage** | AgentCore triage runtime + MCP Gateway + Eka Lambda: `search_indian_medications`, `search_treatment_protocols`. Enabled via `python3 scripts/enable_eka_on_runtime.py`. |
+| **Eka on triage** | AgentCore triage runtime + MCP Gateway + Eka Lambda: `search_medications`, `search_protocols`, `get_protocol_publishers`, `search_pharmacology`. Enabled via `python3 scripts/enable_eka_on_runtime.py`. |
 
 ---
 
@@ -59,7 +59,7 @@ We **augment RMPs** (not replace them) with:
     → Route Lambda → Gateway (maps/routing) → Directions
 ```
 
-- **Triage:** AgentCore runtime with Eka tools (search_indian_medications, search_treatment_protocols) via MCP Gateway.
+- **Triage:** AgentCore runtime with Eka tools (search_medications, search_protocols, get_protocol_publishers, search_pharmacology) via MCP Gateway.
 - **Hospitals:** AgentCore Hospital Matcher; Gateway target get_hospitals.
 - **Route:** Route Lambda calls Gateway maps-target/routing-target for directions.
 

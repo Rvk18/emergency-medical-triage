@@ -460,7 +460,45 @@ def setup_gateway() -> dict:
                 logger.warning("Could not add Eka Lambda permission: %s", e)
         except ClientError as e:
             if e.response.get("Error", {}).get("Code") == "ConflictException":
-                logger.info("Eka target already exists")
+                logger.info("Eka target already exists; updating tool schema to include all four tools")
+                try:
+                    paginator = control_client.get_paginator("list_gateway_targets")
+                    for page in paginator.paginate(gatewayIdentifier=gateway_id):
+                        for t in page.get("items", []):
+                            if t.get("name") == eka_target_name:
+                                target_id = t.get("targetId")
+                                if target_id:
+                                    control_client.update_gateway_target(
+                                        gatewayIdentifier=gateway_id,
+                                        targetId=target_id,
+                                        name=eka_target_name,
+                                        description="Eka Care tools: Indian drugs and treatment protocols",
+                                        targetConfiguration={
+                                            "mcp": {
+                                                "lambda": {
+                                                    "lambdaArn": eka_lambda_arn,
+                                                    "toolSchema": {
+                                                        "inlinePayload": [
+                                                            EKA_SEARCH_MEDICATIONS_SCHEMA,
+                                                            EKA_SEARCH_PROTOCOLS_SCHEMA,
+                                                            EKA_GET_PUBLISHERS_SCHEMA,
+                                                            EKA_SEARCH_PHARMACOLOGY_SCHEMA,
+                                                        ],
+                                                    },
+                                                }
+                                            }
+                                        },
+                                        credentialProviderConfigurations=[
+                                            {"credentialProviderType": "GATEWAY_IAM_ROLE"},
+                                        ],
+                                    )
+                                    logger.info("Eka target updated with all four tools: search_medications, search_protocols, get_protocol_publishers, search_pharmacology")
+                                break
+                        else:
+                            continue
+                        break
+                except ClientError as err:
+                    logger.warning("Could not update Eka target schema: %s", err)
             else:
                 raise
 

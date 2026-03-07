@@ -14,6 +14,7 @@ gateway_maps_lambda.zip
 gateway_routing_lambda.zip
 route_lambda.zip
 gateway_config.json
+eka_out.json
 
 # Secrets and credentials
 secrets.env
