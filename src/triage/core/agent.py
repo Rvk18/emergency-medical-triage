@@ -276,7 +276,7 @@ def _assess_via_converse(request: TriageRequest) -> TriageResult:
                         tool_results.append({"toolUseId": tool_id, "text": "Invalid tool input."})
                     elif name == "search_indian_medications" and is_gateway_configured():
                         try:
-                            logger.info("Triage calling Eka: search_indian_medications drug_name=%s", tool_input.get("drug_name"))
+                            logger.info("Triage calling Eka: search_indian_medications")
                             out = search_medications(
                                 drug_name=tool_input.get("drug_name"),
                                 form=tool_input.get("form"),
@@ -288,7 +288,7 @@ def _assess_via_converse(request: TriageRequest) -> TriageResult:
                         tool_results.append({"toolUseId": tool_id, "text": text})
                     elif name == "search_treatment_protocols" and is_gateway_configured():
                         try:
-                            logger.info("Triage calling Eka: search_treatment_protocols queries=%s", tool_input.get("queries", [])[:3])
+                            logger.info("Triage calling Eka: search_treatment_protocols")
                             out = search_protocols(queries=tool_input.get("queries", []))
                             text = json.dumps(out.get("protocols", out), indent=2)
                         except Exception as e:

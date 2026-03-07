@@ -18,10 +18,14 @@ curl -s -w "\nHTTP:%{http_code}" "${BASE}/health" && echo ""
 curl -s -w "\nHTTP:%{http_code}" -X POST "${BASE}/triage" -H "Content-Type: application/json" -H "Authorization: Bearer $RMP_TOKEN" -d '{"symptoms":["chest pain"],"age_years":50,"sex":"M"}' && echo ""
 # 3. Hospitals (no location)
 curl -s -w "\nHTTP:%{http_code}" -X POST "${BASE}/hospitals" -H "Content-Type: application/json" -H "Authorization: Bearer $RMP_TOKEN" -d '{"severity":"high","recommendations":["Emergency department"],"limit":2}' && echo ""
-# 4. Hospitals (with location) – use limit=1 to avoid 504 (API Gw 29s limit)
+# 4. Hospitals (with location) – use limit=1 (skip-enrich fix reduces Gateway calls; may still 504 if slow)
 curl -s -w "\nHTTP:%{http_code}" --max-time 45 -X POST "${BASE}/hospitals" -H "Content-Type: application/json" -H "Authorization: Bearer $RMP_TOKEN" -d '{"severity":"high","recommendations":["Emergency department"],"limit":1,"patient_location_lat":12.97,"patient_location_lon":77.59}' && echo ""
 # 5. Route
 curl -s -w "\nHTTP:%{http_code}" -X POST "${BASE}/route" -H "Content-Type: application/json" -H "Authorization: Bearer $RMP_TOKEN" -d '{"origin":{"lat":12.97,"lon":77.59},"destination":{"lat":12.8967,"lon":77.5982}}' && echo ""
+# 6. Eka get_protocol_publishers (direct Lambda – new Gateway tool)
+aws lambda invoke --function-name "$GATEWAY_EKA_LAMBDA_ARN" --payload '{"tool":"get_protocol_publishers"}' eka_out.json; cat eka_out.json | head -3
+# 7. Eka search_pharmacology (direct Lambda – new Gateway tool)
+aws lambda invoke --function-name "$GATEWAY_EKA_LAMBDA_ARN" --payload '{"tool":"search_pharmacology","query":"Paracetamol"}' eka_out.json; cat eka_out.json | head -5
 ```
 
 Optional: run **Eka MCP tests** (see table in § Eka MCP tests) to confirm Indian medications and protocols. Once all rows in the Status table are ✅, proceed to the next phase (e.g. deploy web app + frontend integration).
@@ -45,6 +49,8 @@ BASE="${API_URL%/}"
 | 3 | **POST /hospitals** (no location) | `curl -s -w "\n%{http_code}" -X POST "${BASE}/hospitals" -H "Content-Type: application/json" -H "Authorization: Bearer $RMP_TOKEN" -d '{"severity":"high","recommendations":["Emergency department"],"limit":2}'` | Hospital Matcher agent + get_hospitals MCP. |
 | 4 | **POST /hospitals** (with patient location) | `curl -s -w "\n%{http_code}" -X POST "${BASE}/hospitals" -H "Content-Type: application/json" -H "Authorization: Bearer $RMP_TOKEN" -d '{"severity":"high","recommendations":["Emergency department"],"limit":2,"patient_location_lat":12.97,"patient_location_lon":77.59}'` | Uses get_route (Routing agent → maps MCP) for directions_url per hospital; can timeout if enrichment is slow. |
 | 5 | **POST /route** | `curl -s -w "\n%{http_code}" -X POST "${BASE}/route" -H "Content-Type: application/json" -H "Authorization: Bearer $RMP_TOKEN" -d '{"origin":{"lat":12.97,"lon":77.59},"destination":{"lat":12.8967,"lon":77.5982}}'` | Route Lambda → Gateway maps-target → gateway_maps Lambda (Google Maps). |
+| 6 | **Eka get_protocol_publishers** | `aws lambda invoke --function-name "$GATEWAY_EKA_LAMBDA_ARN" --payload '{"tool":"get_protocol_publishers"}' eka_out.json && cat eka_out.json \| jq .` | Direct Lambda; expect JSON with `publishers`. |
+| 7 | **Eka search_pharmacology** | `aws lambda invoke --function-name "$GATEWAY_EKA_LAMBDA_ARN" --payload '{"tool":"search_pharmacology","query":"Paracetamol"}' eka_out.json && cat eka_out.json \| jq .` | Direct Lambda; expect pharmacology results. |
 
 ---
 
@@ -55,21 +61,36 @@ BASE="${API_URL%/}"
 | **GET /health** | — | 200, `{"status":"ok",...}` | 200 | ✅ Yes |
 | **POST /triage** | Triage AgentCore, optional Eka MCP | 200, `severity`, `recommendations`, `session_id` | 200, severity critical | ✅ Yes |
 | **POST /hospitals** (no location) | Hospital Matcher AgentCore, get_hospitals MCP | 200, `hospitals` (e.g. blr-apollo-1), `safety_disclaimer` | 200, real hospitals | ✅ Yes |
-| **POST /hospitals** (with patient location) | Hospital Matcher + get_route → Routing agent → maps MCP | 200, each hospital has `directions_url`, `distance_km`, `duration_minutes` | 504 (API Gateway 29s timeout; use limit=1 may still timeout) | ⚠️ See **Test 4 RCA** |
-| **POST /route** | Route Lambda → maps-target (get_directions) | 200, `distance_km`, `duration_minutes`, `directions_url` | 200, 10.62 km, 32 min, directions_url | ✅ Yes |
-| **Eka get_protocol_publishers** | Direct Lambda or via triage | 200 / publishers list | — | See § New Eka tools |
-| **Eka search_pharmacology** | Direct Lambda or via triage | 200 / pharmacology result | — | See § New Eka tools |
+| **POST /hospitals** (with patient location) | Hospital Matcher + get_route → Routing agent → maps MCP | 200, each hospital has `directions_url`, `distance_km`, `duration_minutes` | 200 (fix deployed: no 2nd get_hospitals in enrich) | ✅ Yes |
+| **POST /route** | Route Lambda → maps-target (get_directions) | 200, `distance_km`, `duration_minutes`, `directions_url` | 200 | ✅ Yes |
+| **Eka get_protocol_publishers** | Direct Lambda invoke (Gateway tool) | 200, JSON with `publishers` | 200, publishers list (ICMR, RSSDI, etc.) | ✅ Yes |
+| **Eka search_pharmacology** | Direct Lambda invoke (Gateway tool) | 200, JSON with pharmacology results | 200, Paracetamol dose/indications | ✅ Yes |
 
 ## Test 4 RCA (POST /hospitals with location → 504)
 
-**Root cause:** AWS API Gateway has a **hard limit of 29 seconds** for integration timeout. The Hospital Matcher Lambda invokes the AgentCore runtime, which (when `patient_location_lat/lon` are provided) calls `get_route` for each hospital to add `distance_km`, `duration_minutes`, and `directions_url`. With `limit=2`, the total agent work can exceed 29 seconds, so API Gateway returns **504 Gateway Timeout** before the Lambda completes. Increasing the Lambda timeout (e.g. to 120s) does **not** extend the API Gateway limit.
+**Root cause:** AWS API Gateway REST API has a **hard maximum integration timeout of 29 seconds**. The Hospital Matcher Lambda can be set to 60s, but API Gateway stops waiting at 29s and returns **504 Gateway Timeout** if the Lambda has not responded by then.
 
-**Mitigation:** For the comprehensive test, use `limit=1` so the request often completes within 29s, or accept 504 for `limit≥2`. A longer-term fix would be to return hospitals without enrichment first (200), then enrich asynchronously or via a separate call.
+**Why the request takes so long:** With `patient_location_lat` / `patient_location_lon`, the flow is:
+
+1. **Lambda** invokes the **AgentCore Hospital Matcher runtime** (one blocking call).
+2. **Inside the runtime** the agent:
+   - Calls **get_hospitals** via the Gateway (one round trip: runtime → Gateway → get_hospitals Lambda).
+   - For **each** hospital, calls **get_route** via the Gateway (runtime → Gateway → routing Lambda → maps). Each get_route can take 10–20+ seconds (routing + Google Maps).
+3. **After** the agent returns, the code used to always call **`_enrich_hospitals_with_routes`**, which did **get_hospitals again** and **get_route again** for each hospital to “guarantee” directions. So we were doing **get_hospitals twice** and **get_route twice per hospital** even for `limit=1` → **4 Gateway calls** in one request. That easily exceeds 29s, so **limit=1 still hit 504**. A further cause: when the agent did not add route info, **enrichment** called **get_hospitals again** (to resolve lat/lon) then get_route per hospital → **2× get_hospitals + N× get_route**, still over 29s for limit=1.
+
+**What was fixed:** In `agentcore/agent/hospital_matcher_agent.py`, **enrichment is now skipped** when the agent has already added `directions_url` and `distance_km` for all hospitals. That removes the duplicate get_hospitals + get_route calls when the agent does its job, so we only do 1 get_hospitals + N get_route (N = limit) instead of 2 + 2N. For `limit=1` that’s 2 calls instead of 4, which may fit within 29s depending on latency.
+
+**What remains:** Even with 2 calls (get_hospitals + one get_route), total time can still approach or exceed 29s (e.g. cold start, slow maps, or routing agent). So 504 can still occur. Options if it does:
+
+- **Return 200 without route info:** When patient location is present, return hospitals quickly without `distance_km` / `directions_url` and let the client call **POST /route** for the chosen hospital.
+- **Separate “enrich” step:** Return 200 with hospitals first; client or a second request asks for “add directions for these hospitals” (e.g. async or a dedicated endpoint).
+
+**Mitigation in tests:** Use `limit=1` for the “with location” test; if 504 persists, treat it as a known platform limit and document that production may need one of the options above.
 
 ---
 
 - **POST /route 502/500:** Run `python3 scripts/setup_agentcore_gateway.py` so **gateway_config** secret has `gateway_url` and `client_info`. Ensure **google_maps_api_key** is set in tfvars and Terraform applied so gateway_maps Lambda has the key. If Policy is ENFORCE and route returns "Tool Execution Denied", the Cedar action/resource at request time may not match the policy; use `python3 scripts/setup_agentcore_policy.py --log-only` so route works, then check Observability for the actual Cedar request.
-- **POST /hospitals with location → 504:** **RCA:** API Gateway has a **maximum integration timeout of 29 seconds**. The Hospital Matcher agent (with patient location) calls get_route per hospital to enrich with distance/directions; with limit=2 this can exceed 29s. **Fix:** Use `limit=1` for the test, or accept 504 for limit≥2. Lambda timeout (60s) does not extend the API Gateway integration limit.
+- **POST /hospitals with location → 504:** **RCA:** API Gateway has a **maximum integration timeout of 29 seconds**. The Hospital Matcher agent (with patient location) calls get_route per hospital to enrich with distance/directions; with limit=2 this can exceed 29s. **Fix:** Enrichment no longer calls get_hospitals again; it uses only lat/lon from the agent's hospital objects. Redeploy: `agentcore deploy --agent hospital_matcher_agent` then `python3 scripts/enable_gateway_on_hospital_matcher_runtime.py`. Use `limit=1` for the test.
 - **401 on any POST:** Get a fresh RMP token: `RMP_TOKEN=$(python3 scripts/get_rmp_token.py)`.
 
 ---
@@ -123,10 +144,10 @@ Use same `eval` and `RMP_TOKEN` as in § Comprehensive endpoint testing; `BASE="
 ```bash
 eval $(python3 scripts/load_api_config.py --exports)
 # get_protocol_publishers (no extra params)
-aws lambda invoke --function-name "$GATEWAY_EKA_LAMBDA_ARN" --payload '{"tool":"get_protocol_publishers"}' eka_out.json --cli-binary-format raw-in-base64-out && cat eka_out.json | jq .
+aws lambda invoke --function-name "$GATEWAY_EKA_LAMBDA_ARN" --payload '{"tool":"get_protocol_publishers"}' eka_out.json && cat eka_out.json | jq .
 
 # search_pharmacology (query required for meaningful result)
-aws lambda invoke --function-name "$GATEWAY_EKA_LAMBDA_ARN" --payload '{"tool":"search_pharmacology","query":"Paracetamol"}' eka_out.json --cli-binary-format raw-in-base64-out && cat eka_out.json | jq .
+aws lambda invoke --function-name "$GATEWAY_EKA_LAMBDA_ARN" --payload '{"tool":"search_pharmacology","query":"Paracetamol"}' eka_out.json && cat eka_out.json | jq .
 ```
 
-Run from project root so `eka_out.json` is written in the repo (or use `/tmp/eka_out.json` if you prefer). Expected: JSON body with `publishers` (get_protocol_publishers) or pharmacology results (search_pharmacology). Check the output file for Eka API errors.
+(Use `--cli-binary-format raw-in-base64-out` with **AWS CLI v2** if your payload is raw JSON; omit for CLI v1.) Run from project root so `eka_out.json` is written in the repo (or use `/tmp/eka_out.json` if you prefer). Expected: JSON body with `publishers` (get_protocol_publishers) or pharmacology results (search_pharmacology). Check the output file for Eka API errors.

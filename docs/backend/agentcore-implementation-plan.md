@@ -41,7 +41,7 @@
 | **Observability** | P0 | Trace review, medical audit, debugging |
 | **Memory** | P1 | Patient context, repeat visits, follow-up |
 | **Identity** | P1 | RMP auth when frontend ready |
-| **Policy** | P2 | Stricter safety boundaries (when GA) |
+| **Policy** | P2 | Stricter safety boundaries (GA; implemented via setup_agentcore_policy.py) |
 | **Code Interpreter** | P3 | Optional: scoring, travel time calculations |
 | **Browser** | P3 | Optional: hospital availability lookup |
 | **Evaluations** | P3 | Quality measurement (when GA) |
@@ -145,7 +145,7 @@
 - [ ] **Multi-agent:** Hospital Matcher agent has `get_route_tool` that calls Gateway → Routing; can return hospitals + per-hospital route info when patient location provided.
 - [ ] **POST /route** endpoint: Lambda invokes Routing agent; same tracing pattern (source=, duration_ms=, request_id).
 - [ ] **Tracing and log delivery in every agent:** Triage, Hospital Matcher, Routing all emit source=, duration_ms=, request_id=; documented in [OBSERVABILITY.md](./OBSERVABILITY.md).
-- [ ] **Guardrails and policy (G1–G3 + Policy):** Input/output validation and safety prompts for all agents; AgentCore Policy (when GA) for stricter action boundaries.
+- [ ] **Guardrails and policy (G1–G3 + Policy):** Input/output validation and safety prompts for all agents; AgentCore Policy implemented (run `scripts/setup_agentcore_policy.py`; see [POLICY-RUNBOOK.md](./POLICY-RUNBOOK.md)).
 - [ ] **Identity:** Cognito/IdP integration for RMP when frontend ready.
 
 ---
