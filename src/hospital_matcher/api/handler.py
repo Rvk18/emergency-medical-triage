@@ -34,7 +34,7 @@ def handler(event: dict, context: object) -> dict:
 
         request = HospitalMatchRequest.model_validate(body)
     except Exception as e:
-        logger.warning("Invalid request: %s", e)
+        logger.warning("Invalid request: %s", type(e).__name__)
         return _response(400, {"error": str(e)})
 
     try:

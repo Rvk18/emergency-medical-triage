@@ -82,7 +82,7 @@ def _build_prompt(payload: dict) -> str:
 
 
 def _enrich_hospitals_with_routes(data: dict, payload: dict) -> dict:
-    """When patient location is provided and Gateway is configured, add distance_km, duration_minutes, directions_url to each hospital that has lat/lon."""
+    """When patient location is provided and Gateway is configured, add distance_km, duration_minutes, directions_url to each hospital that has lat/lon and is missing them. Skip if agent already added route info to avoid duplicate Gateway calls (which contribute to API Gateway 29s timeout → 504). Uses only lat/lon from agent response (no second get_hospitals call) to stay under 29s."""
     plat = payload.get("patient_location_lat")
     plon = payload.get("patient_location_lon")
     if plat is None or plon is None or not _is_gateway_configured():
@@ -90,24 +90,17 @@ def _enrich_hospitals_with_routes(data: dict, payload: dict) -> dict:
     hospitals = data.get("hospitals") or []
     if not hospitals:
         return data
-    # Get lat/lon from Gateway (model output often omits them); merge by hospital_id
-    try:
-        gw = get_hospitals_via_gateway(
-            severity=payload.get("severity", "medium"),
-            limit=max(len(hospitals), 10),
-        )
-        gw_list = gw.get("hospitals") or []
-        coords_by_id = {(h.get("hospital_id")): (h.get("lat"), h.get("lon")) for h in gw_list if h.get("hospital_id") and h.get("lat") is not None and h.get("lon") is not None}
-    except Exception as e:
-        logger.warning("Could not fetch hospital coords for enrichment: %s", e)
-        coords_by_id = {}
+    # Skip enrichment if agent already added route info for all hospitals (avoids duplicate get_route calls and reduces 504 risk)
+    if all(
+        h.get("directions_url") and h.get("distance_km") is not None
+        for h in hospitals
+    ):
+        return data
+    # Use only lat/lon from agent's hospital objects (from get_hospitals tool result). Do NOT call get_hospitals again here—that extra Gateway call was causing 504 (2× get_hospitals + N× get_route > 29s).
     enriched = []
     for h in hospitals:
         h = dict(h)
-        hid = h.get("hospital_id")
         lat, lon = h.get("lat"), h.get("lon")
-        if (lat is None or lon is None) and hid:
-            lat, lon = coords_by_id.get(hid) or (None, None)
         if lat is not None and lon is not None and (h.get("directions_url") is None or h.get("distance_km") is None):
             try:
                 route = get_route_via_gateway(
@@ -122,7 +115,7 @@ def _enrich_hospitals_with_routes(data: dict, payload: dict) -> dict:
                 if route.get("duration_minutes") is not None:
                     h["estimated_minutes"] = int(round(float(route["duration_minutes"])))
             except Exception as e:
-                logger.warning("Enrich route for %s failed: %s", hid, e)
+                logger.warning("Enrich route for %s failed: %s", h.get("hospital_id"), e)
         enriched.append(h)
     data["hospitals"] = enriched
     return data

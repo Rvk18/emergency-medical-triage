@@ -94,14 +94,14 @@ We bring forward from [ROADMAP-after-AC4.md](./ROADMAP-after-AC4.md) the followi
 | **G1** | **Input validation** | Apply to **Triage**, **Hospital Matcher**, and **Route** requests: symptom list length, vitals ranges (e.g. heart_rate 20–300), age 0–150, coordinate bounds, no empty/invalid payloads. Return 400 with clear message. |
 | **G2** | **Output validation** | Triage: severity enum, confidence 0–1, max recommendations count/length. Hospital Matcher: max hospitals count, max safety_disclaimer length. Route: max fields/length for directions. Reject out-of-enum or malformed model output. |
 | **G3** | **Safety boundaries in prompts** | Document and tighten **system prompts** for all three agents: “emergency triage / hospital matching / routing only”, “do not prescribe”, “do not replace physician”. Add refusal instructions for off-topic or non-emergency queries. |
-| **Policy** | **Stricter agent action boundaries** | Use AgentCore Policy (when GA) to restrict which tools/actions each agent can call; principle of least privilege. Document in runbook. |
+| **Policy** | **Stricter agent action boundaries** | **Done.** AgentCore Policy is GA. Policy engine attached to Gateway via `scripts/setup_agentcore_policy.py`; only whitelisted tools allowed. See [POLICY-RUNBOOK.md](./POLICY-RUNBOOK.md). |
 
 **Implementation notes:**
 
 - **G1:** Pydantic models and validator helpers in each Lambda (or shared validation module). Route request: validate origin/destination lat/lon ranges and optional hospital_id format.
 - **G2:** After agent response, validate structure and enums before returning; on failure log and return safe fallback or 500 with no raw model output in body.
 - **G3:** Central place (e.g. `docs/backend/AGENT-PROMPTS.md`) listing each agent’s system prompt and refusal rules; update agent code to use them.
-- **Policy:** When Bedrock AgentCore Policy is GA, configure per-agent policies and document in runbook.
+- **Policy:** Policy engine on Gateway; run `python3 scripts/setup_agentcore_policy.py` after gateway setup. See [POLICY-RUNBOOK.md](./POLICY-RUNBOOK.md).
 
 ---
 
@@ -123,7 +123,7 @@ We bring forward from [ROADMAP-after-AC4.md](./ROADMAP-after-AC4.md) the followi
 | 4 | POST /route endpoint | Lambda invokes Routing agent; same tracing pattern as Triage/Hospital Matcher. |
 | 5 | Tracing and log delivery in every agent | Triage, Hospital Matcher, Routing all log source=, duration_ms=, request_id=; doc in OBSERVABILITY.md. |
 | 6 | Google Maps MCP (Lambda as Gateway target) | Lambda calling Directions API; key in Secrets Manager; optional. |
-| 7 | Guardrails G1–G3 + Policy | Input/output validation and safety prompts for all agents; Policy when GA. |
+| 7 | Guardrails G1–G3 + Policy | Input/output validation and safety prompts for all agents; Policy implemented (runbook + setup_agentcore_policy.py). |
 | 8 | Identity (Cognito/IdP) for RMP | **Defer** – document design; implement when frontend ready. |
 | 9 | Hospital data (Bangalore + Chennai) | Add from internet (Places/OSM); name, address, lat, lon for routing. |
 

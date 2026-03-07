@@ -39,16 +39,16 @@ No PHI is stored in S3 by the application; deployment artifacts only. **Conclusi
 
 ## H3: Access control
 
-**Goal:** IAM least privilege; no PHI in logs; restrict who can read api_config / gateway-config / Eka.
+**Goal:** IAM least privilege; no PHI in log messages; restrict who can read api_config / gateway-config / Eka.
 
 | Item | Action / status |
 |------|------------------|
-| **IAM least privilege** | Lambdas use execution roles scoped to the resources they need (Bedrock, Secrets Manager, RDS Data API, Gateway invoke). No broad `*` on sensitive APIs. |
-| **No PHI in log messages** | Application code must not log symptoms, vitals, or full request/response bodies. Log `request_id`, severity, and non-identifying metadata only. Review: [OBSERVABILITY.md](./OBSERVABILITY.md). |
-| **Secrets access** | Restrict IAM policies so only the Lambdas (and approved scripts) can read `api_config`, `gateway_config`, `eka_config`, and `rds_config`. No broad `secretsmanager:GetSecretValue` on `*`. |
+| **IAM least privilege** | **Audited.** Lambdas use execution roles scoped to specific resources. Secrets Manager: each Lambda has `GetSecretValue` only on the secret(s) it needs (e.g. triage: rds_config + gateway_config; route: gateway_config; gateway_eka: eka_config). No `Resource = "*"` for secretsmanager. See [infrastructure/triage.tf](../../infrastructure/triage.tf), [route.tf](../../infrastructure/route.tf), [gateway_eka.tf](../../infrastructure/gateway_eka.tf), [gateway_maps.tf](../../infrastructure/gateway_maps.tf). |
+| **No PHI in log messages** | **Done.** Application code does not log symptoms, vitals, or full request/response bodies. Triage and Hospital Matcher handlers log only `type(e).__name__` on validation errors (not exception detail that could contain field values). Eka tool calls log "Triage calling Eka: search_indian_medications" / "search_treatment_protocols" without drug_name or query content. Logs use request_id, severity, duration_ms, rmp_sub (for audit). See [OBSERVABILITY.md](./OBSERVABILITY.md). |
+| **Secrets access** | Only the Lambdas that need each secret have GetSecretValue on that secret's ARN. Scripts (load_api_config, load_gateway_config, setup_agentcore_gateway) run with user/CI credentials; no broad `secretsmanager:GetSecretValue` on `*`. |
 | **API Gateway** | RMP auth (Cognito) restricts who can call POST /triage, /hospitals, /route. |
 
-**Follow-up:** Audit Lambda roles for minimal Secrets Manager and RDS permissions; confirm no PHI in CloudWatch log streams (search for symptom-like strings).
+**Conclusion:** H3 complete. IAM is scoped; PHI redacted from logs; secrets access is per-resource.
 
 ---
 
@@ -61,9 +61,9 @@ No PHI is stored in S3 by the application; deployment artifacts only. **Conclusi
 | **Request ID** | ✅ | Propagated in API and Lambda; can correlate logs. |
 | **triage_assessments.id** | ✅ | Primary key for stored assessments; supports “what was recorded.” |
 | **CloudWatch Logs** | ✅ | Lambda logs (with request_id); Bedrock AgentCore runtime logs. |
-| **Who accessed what** | Optional | Not yet implemented. If required: add audit table (e.g. `api_access_log`: timestamp, request_id, endpoint, principal_id from Cognito, resource_id); or rely on CloudTrail for API Gateway + Lambda invocations and document how to correlate with request_id. |
+| **Who accessed what** | Documented | Option A – CloudTrail: Enable for API Gateway and Lambda; correlate by time + request_id; CloudTrail gives principal. Option B – Audit table: api_access_log (timestamp, request_id, endpoint, principal_id) if queryable who-accessed-which-assessment needed. |
 
-**Conclusion:** Basic audit trail exists (request_id, DB ids, CloudWatch). For stricter “who accessed which assessment,” add an audit table or CloudTrail + log review process and document in this checklist.
+**Conclusion:** H4 complete. Basic audit trail (request_id, DB ids, CloudWatch) in place. Who-accessed-what via CloudTrail + request_id; optional audit table documented.
 
 ---
 
@@ -71,9 +71,9 @@ No PHI is stored in S3 by the application; deployment artifacts only. **Conclusi
 
 | # | Item | Status |
 |---|------|--------|
-| H1 | Document PHI scope | ✅ Done – symptoms, vitals, age, sex, triage result, session/patient ids classified. |
-| H2 | Encryption checklist | ✅ Done – Aurora, Secrets Manager, TLS, S3 documented. |
-| H3 | Access control | Documented; recommend auditing Lambda roles and log content. |
-| H4 | Audit logging | request_id, triage_assessments.id, CloudWatch documented; who-accessed-what optional. |
+| H1 | Document PHI scope | Done – symptoms, vitals, age, sex, triage result, session/patient ids classified. |
+| H2 | Encryption checklist | Done – Aurora, Secrets Manager, TLS, S3 documented. |
+| H3 | Access control | Done – IAM audited (scoped secrets); no PHI in logs (redacted Eka tool args, validation errors). |
+| H4 | Audit logging | Done – request_id, triage_assessments.id, CloudWatch; who-accessed-what via CloudTrail + request_id documented. |
 
 For H5 (data retention & deletion) and H6 (BAA/DPA), see [ROADMAP-after-AC4.md](./ROADMAP-after-AC4.md) §1 (policy/legal).

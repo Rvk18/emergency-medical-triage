@@ -20,16 +20,16 @@ Order of work: **1 → 2 → 3 → 4**, then **5 (web app deploy + frontend inte
 
 ---
 
-## Phase 2: Policy (when AgentCore Policy is GA)
+## Phase 2: Policy (AgentCore Policy is GA) ✅ Done
 
-**Goal:** Restrict which tools each agent can call; principle of least privilege.
+**Goal:** Restrict which tools can be called through the Gateway; principle of least privilege.
 
-**Steps:** When Bedrock AgentCore Policy is generally available:
+**Status:** Implemented. A policy engine is created and attached to the Gateway.
 
-- Configure per-agent policies (Triage: submit_triage_result + Eka tools; Hospital Matcher: get_hospitals + get_route; Routing: get_directions only).
-- Document in runbook. See [AC4-Routing-Identity-Design.md](backend/AC4-Routing-Identity-Design.md) §4.
-
-**If Policy is not yet GA:** Skip and revisit later; no code change until GA.
+**Steps (already done):**
+- Run `python3 scripts/setup_agentcore_policy.py` after Gateway setup. This creates the policy engine, adds a Cedar permit policy that allows only the whitelisted tools (get_hospitals, Eka tools, get_route, get_directions, geocode_address), and attaches the engine to the Gateway in ENFORCE mode.
+- **Runbook:** [POLICY-RUNBOOK.md](backend/POLICY-RUNBOOK.md) — allowlist, how to update, and optional per-runtime restriction with separate OAuth clients.
+- See [AC4-Routing-Identity-Design.md](backend/AC4-Routing-Identity-Design.md) §4.
 
 ---
 
@@ -99,7 +99,7 @@ See [TESTING-Pipeline-curl.md](backend/TESTING-Pipeline-curl.md).
 | Phase | What | Done when |
 |-------|------|-----------|
 | 1 | Redeploy AgentCore (all 3 runtimes + enable_eka_on_runtime) | ✅ G3 prompts live; Eka still on triage. |
-| 2 | Policy (when GA) | Per-agent tool restrictions documented and configured. |
+| 2 | Policy (GA) | ✅ Policy engine on Gateway via `scripts/setup_agentcore_policy.py`; see [POLICY-RUNBOOK.md](backend/POLICY-RUNBOOK.md). |
 | 3 | HIPAA H1–H4 | PHI scope, encryption, access, audit documented. See [HIPAA-Compliance-Checklist.md](backend/HIPAA-Compliance-Checklist.md). |
 | 4 | AC-3 re-test | session_id continuity verified with curl or frontend. |
 | 5 | Web app deploy + frontend integration | App deployed; uses API_URL, Cognito, triage → hospitals → route; session_id sent. |

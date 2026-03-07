@@ -12,25 +12,25 @@
 - **Google Maps / POST /route:** Done and tested. Real directions when API key is in Secrets Manager; `distance_km`, `duration_minutes`, `directions_url`. See [GOOGLE-MAPS-ACCOUNT-SETUP.md](../infrastructure/GOOGLE-MAPS-ACCOUNT-SETUP.md).
 - **AC-2 (Triage on AgentCore):** Done. Triage agent in `agentcore/agent/triage_agent.py`; POST /triage invokes AgentCore; observability in [OBSERVABILITY.md](./OBSERVABILITY.md).
 - **AC-3 (Memory + Hospital MCP):** Implemented and tested. Optional `session_id` / `patient_id` on /triage and /hospitals; passed to AgentCore as `runtimeSessionId`. Hospital Matcher uses Gateway get_hospitals. Optional: re-test session continuity (same session_id across triage → hospitals → route).
-- **AC-4 (Routing + Identity):** Routing pipeline and RMP auth done. **Guardrails G1–G3 done:** input validation (triage: symptoms/vitals/age; hospitals: severity enum, limit, lat/lon; route: body, lat/lon, address length), output validation (triage/hospitals/route max lengths and enums), safety prompts (AGENT-PROMPTS.md, prompts updated in instructions and agents). Policy (AgentCore) when GA. See [AC4-Routing-Identity-Design.md](./AC4-Routing-Identity-Design.md) §4, [AGENT-PROMPTS.md](./AGENT-PROMPTS.md).
+- **AC-4 (Routing + Identity):** Routing pipeline and RMP auth done. **Guardrails G1–G3 done:** input validation (triage: symptoms/vitals/age; hospitals: severity enum, limit, lat/lon; route: body, lat/lon, address length), output validation (triage/hospitals/route max lengths and enums), safety prompts (AGENT-PROMPTS.md, prompts updated in instructions and agents). **Policy done:** run `scripts/setup_agentcore_policy.py` after gateway setup. See [AC4-Routing-Identity-Design.md](./AC4-Routing-Identity-Design.md) §4, [AGENT-PROMPTS.md](./AGENT-PROMPTS.md), [POLICY-RUNBOOK.md](./POLICY-RUNBOOK.md).
 - **Hackathon submission:** Docs updated. [HACKATHON.md](../../HACKATHON.md), [API-Integration-Guide.md](../frontend/API-Integration-Guide.md), [triage-api-contract.md](../frontend/triage-api-contract.md).
 
 ---
 
 ## What to work on next
 
-**Policy (when AgentCore Policy is GA):** Restrict which tools each agent can call; document in runbook. See [AC4-Routing-Identity-Design.md](./AC4-Routing-Identity-Design.md) §4.
+**Policy (AgentCore Policy is GA):** Implemented. A policy engine is attached to the Gateway via `scripts/setup_agentcore_policy.py`; only whitelisted tools are allowed. See [POLICY-RUNBOOK.md](./POLICY-RUNBOOK.md). For per-runtime restriction (Triage vs Hospital Matcher vs Routing), use separate OAuth clients per runtime and extend the Cedar policies as described in the runbook.
 
 **Completed: Guardrails G1–G3** — G1 input validation (triage/hospitals/route), G2 output validation (max lengths, enums, route sanitize), G3 safety prompts ([AGENT-PROMPTS.md](./AGENT-PROMPTS.md), prompts updated in instructions and agents).
 
-**Next (in order):** 1) ~~Redeploy AgentCore~~ ✅ Done; 2) Policy when GA; 3) HIPAA H1–H4 ✅ Documented ([HIPAA-Compliance-Checklist.md](./HIPAA-Compliance-Checklist.md)); 4) AC-3 re-test; 5) Deploy web app + frontend–backend integration. Full roadmap: [ROADMAP-NEXT.md](../ROADMAP-NEXT.md).
+**Next (in order):** 1) ~~Redeploy AgentCore~~ ✅ Done; 2) Policy ✅ Implemented ([POLICY-RUNBOOK.md](./POLICY-RUNBOOK.md), `scripts/setup_agentcore_policy.py`); 3) HIPAA H1–H4 ✅ Complete ([HIPAA-Compliance-Checklist.md](./HIPAA-Compliance-Checklist.md)); 4) Comprehensive endpoint testing ([API-TEST-RESULTS.md](./API-TEST-RESULTS.md)); 5) Deploy web app + frontend–backend integration. Full roadmap: [ROADMAP-NEXT.md](../ROADMAP-NEXT.md).
 
 | # | Item | What to do |
 |---|------|------------|
 | **G1** | **Input validation** | Triage: symptom list length, vitals ranges (e.g. heart_rate 20–300), age 0–150. Hospitals: severity enum, limit bounds. Route: origin/destination lat/lon bounds, no empty payloads. Return **400** with clear message. See [AC4-Routing-Identity-Design.md](./AC4-Routing-Identity-Design.md) §4. |
 | **G2** | **Output validation** | Triage: severity enum, confidence 0–1, max recommendations count/length. Hospitals: max hospitals count, max safety_disclaimer length. Route: validate directions response shape. Reject malformed model output; log and return safe fallback or 500. |
 | **G3** | **Safety boundaries in prompts** | Document and tighten system prompts for all three agents: “emergency triage / hospital matching / routing only”, “do not prescribe”, “do not replace physician”. Refusal instructions for off-topic queries. See [AC4-Routing-Identity-Design.md](./AC4-Routing-Identity-Design.md) §4, [ROADMAP-after-AC4.md](./ROADMAP-after-AC4.md) §2. |
-| **Policy** | **Agent action boundaries** | When AgentCore Policy is GA: restrict which tools each agent can call; document in runbook. |
+| **Policy** | **Agent action boundaries** | Implemented: policy engine on Gateway via [POLICY-RUNBOOK.md](./POLICY-RUNBOOK.md) and `scripts/setup_agentcore_policy.py`. |
 
 **References:** [AC4-Routing-Identity-Design.md](./AC4-Routing-Identity-Design.md) §4 (G1–G3 implementation notes), [ROADMAP-after-AC4.md](./ROADMAP-after-AC4.md) §2.
 
@@ -48,7 +48,7 @@
 
 4. **AC-2.** Triage on AgentCore + Observability — **Done**
 5. **AC-3.** Memory + Hospital MCP — **Done** (session_id/patient_id; tested; optional re-test)
-6. **AC-4.** Routing + Identity — **Routing pipeline + Google Maps + RMP auth + Guardrails G1–G3 done.** Remaining: Policy when GA.
+6. **AC-4.** Routing + Identity — **Routing pipeline + Google Maps + RMP auth + Guardrails G1–G3 + Policy done.** Policy: run `python3 scripts/setup_agentcore_policy.py` after gateway setup.
 
 ---
 

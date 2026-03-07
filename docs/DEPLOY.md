@@ -61,6 +61,7 @@ So we don't need scripts because Lambdas "can't" read secrets – they can. We n
 - **First-time deploy (or new environment):** The person or CI pipeline that deploys the stack runs, in order:
   1. **`terraform apply`** – creates all AWS resources and secrets (with empty gateway_config).
   2. **`python3 scripts/setup_agentcore_gateway.py`** – creates the Gateway, populates gateway_config, and sets Gateway env vars on the Hospital Matcher and Routing runtimes.
+  3. **`python3 scripts/setup_agentcore_policy.py`** – creates the policy engine and attaches it to the Gateway (tool allowlist, ENFORCE). Optional but recommended; see [POLICY-RUNBOOK.md](backend/POLICY-RUNBOOK.md).
 
 - **Subsequent deploys:** If you only change Lambda code (e.g. Terraform apply again), you do **not** need to re-run the setup script unless you recreated the Gateway or the secret. If you **redeploy an AgentCore agent** (e.g. `agentcore deploy` for hospital_matcher_agent), that deploy can overwrite the runtime's env vars; **you must then re-run the corresponding enable script** (see "After agentcore deploy" above). So the "scripts" are either **one-time** (Gateway setup) or **required after every agentcore deploy** (re-apply env to that runtime).
 
@@ -72,7 +73,8 @@ So we don't need scripts because Lambdas "can't" read secrets – they can. We n
 |------|---------|--------|
 | 1 | `cd infrastructure && terraform apply` | Create API Gateway, Lambdas, secrets (api_config, gateway_config placeholder), RDS, etc. |
 | 2 | `python3 scripts/setup_agentcore_gateway.py` | Create AgentCore Gateway, populate gateway_config, set Gateway env on Hospital Matcher and Routing runtimes. |
-| 3 | **After every `agentcore deploy`** | Re-run the enable script for the agent you deployed (see "After agentcore deploy" above). Do not skip this or the runtime will lose Gateway/Eka env. |
+| 3 | `python3 scripts/setup_agentcore_policy.py` | Create policy engine and attach to Gateway (tool allowlist; ENFORCE). See [backend/POLICY-RUNBOOK.md](backend/POLICY-RUNBOOK.md). |
+| 4 | **After every `agentcore deploy`** | Re-run the enable script for the agent you deployed (see "After agentcore deploy" above). Do not skip this or the runtime will lose Gateway/Eka env. |
 
 **Getting API URL for frontend:** After step 1, the API URL is in the **api_config** secret. Run `eval $(python3 scripts/load_api_config.py --exports)` to set `API_URL` in your shell, or read the secret from your app (e.g. from a backend that exposes config). Terraform does not need to "run" anything else for Lambdas to work; they read secrets at runtime.
 
