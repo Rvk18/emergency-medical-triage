@@ -2,6 +2,43 @@
 
 AgentCore Runtime deployments. Hospital Matcher is used when `USE_AGENTCORE=true`; Triage when `USE_AGENTCORE_TRIAGE=true` (AC-2).
 
+## Redeploy AgentCore (e.g. after G3 prompt updates)
+
+To push the latest agent code (including G3 safety prompts) to all three runtimes:
+
+1. **Prereqs:** From project root, `pip install bedrock-agentcore-starter-toolkit strands-agents` and AWS credentials configured.
+
+2. **Hospital Matcher** (one runtime):
+   ```bash
+   cd agentcore/agent
+   agentcore configure --entrypoint hospital_matcher_agent.py --non-interactive
+   agentcore deploy
+   ```
+   Note the **Runtime ARN**; ensure `agent_runtime_arn` in `infrastructure/terraform.tfvars` matches (or update tfvars and run `terraform apply` so the Hospital Matcher Lambda uses it).
+
+3. **Triage** (separate runtime; has Eka tools):
+   ```bash
+   agentcore configure --entrypoint triage_agent.py --non-interactive
+   agentcore deploy
+   ```
+   Note the **Runtime ARN**; ensure `triage_agent_runtime_arn` in `infrastructure/terraform.tfvars` matches. **Then re-apply Gateway env vars** so Eka stays enabled on the updated runtime:
+   ```bash
+   cd ../..   # project root
+   python3 scripts/enable_eka_on_runtime.py
+   ```
+
+4. **Routing** (third runtime):
+   ```bash
+   cd agentcore/agent
+   agentcore configure --entrypoint routing_agent.py --non-interactive
+   agentcore deploy
+   ```
+   Update `routing_agent_runtime_arn` in `infrastructure/terraform.tfvars` if the ARN changed, then `terraform apply`.
+
+5. **Verify:** Run a triage curl and a hospitals curl; confirm responses and that Eka brands appear when you ask for Indian medications.
+
+---
+
 ## Setup (first time)
 
 1. Install the starter toolkit:

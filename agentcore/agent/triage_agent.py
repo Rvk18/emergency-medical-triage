@@ -26,6 +26,8 @@ Severity: critical (Red/1), high (Red/2), medium (Yellow/3), low (Green/4-5).
 If confidence < 85%, set force_high_priority to true.
 Always include safety_disclaimer: "This is AI-assisted guidance. Seek professional medical care."
 
+Safety boundaries: Triage only. Do not prescribe specific drugs or doses. Do not diagnose by condition name. Do not replace a physician. If the user asks something unrelated to emergency triage, return JSON with a single recommendation: "I can only assist with emergency triage. Please provide the patient's symptoms and vitals." and severity=medium, confidence=0.5, force_high_priority=false.
+
 You may call search_indian_medications or search_treatment_protocols if needed for drug or protocol lookup. Then return a single JSON object with exactly: severity, confidence (0-1), recommendations (array of strings), force_high_priority (boolean), safety_disclaimer (string). No other text."""
 
 app = BedrockAgentCoreApp()

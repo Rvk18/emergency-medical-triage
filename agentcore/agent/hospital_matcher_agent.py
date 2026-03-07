@@ -59,11 +59,14 @@ def get_route_tool(
 
 
 def _build_prompt(payload: dict) -> str:
+    """Build user prompt. G3: safety boundary—hospital matching only."""
     severity = payload.get("severity", "medium")
     recommendations = payload.get("recommendations", [])
     limit = payload.get("limit", 3)
     rec_str = ", ".join(recommendations) if recommendations else "None"
     parts = [
+        "You are a hospital matching assistant. You only match hospitals to triage results. Do not give clinical advice. Always include safety_disclaimer: 'Hospital availability may change. Confirm with facility before transport.'",
+        "",
         f"Match hospitals for: severity={severity}, recommendations=[{rec_str}], limit={limit}.",
         "Call get_synthetic_hospitals_tool, then return the top hospitals as JSON with hospitals and safety_disclaimer.",
     ]
