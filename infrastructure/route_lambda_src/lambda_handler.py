@@ -15,6 +15,8 @@ import urllib.parse
 import http.client
 import ssl
 
+logger = logging.getLogger(__name__)
+
 # G1: Input validation
 ADDRESS_MAX_LENGTH = 500
 DIRECTIONS_URL_MAX_LENGTH = 2000

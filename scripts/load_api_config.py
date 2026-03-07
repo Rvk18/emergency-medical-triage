@@ -2,7 +2,9 @@
 """
 Load API and Gateway config from AWS Secrets Manager (boto3).
 
-CLI usage (from project root):
+Config is already set by Terraform (api_config secret) when you run terraform apply.
+Lambdas and the API read the same secret automatically. This script only loads it into
+your shell for local testing (curl, scripts); run once per terminal.
 
   # Set env vars in shell for curl, etc.:
   eval $(python scripts/load_api_config.py --exports)

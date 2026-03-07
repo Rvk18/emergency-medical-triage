@@ -145,5 +145,8 @@ resource "aws_secretsmanager_secret_version" "api_config" {
     bedrock_config_secret_name       = aws_secretsmanager_secret.bedrock_config.name
     rds_config_secret_name           = aws_secretsmanager_secret.rds_config.name
     eka_config_secret_name           = var.eka_api_key != "" ? aws_secretsmanager_secret.eka_config[0].name : ""
+    agent_runtime_arn                = var.use_agentcore ? var.agent_runtime_arn : ""
+    triage_agent_runtime_arn         = var.use_agentcore_triage ? var.triage_agent_runtime_arn : ""
+    routing_agent_runtime_arn        = var.routing_agent_runtime_arn != "" ? var.routing_agent_runtime_arn : ""
   })
 }

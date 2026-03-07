@@ -102,7 +102,19 @@ def call_gateway_tool(tool_name: str, arguments: dict[str, Any]) -> dict[str, An
     if "error" in result:
         raise RuntimeError(f"Gateway tool error: {result['error']}")
 
-    return result.get("result") or {}
+    raw = result.get("result") or {}
+    # Unwrap MCP result: Gateway returns { isError, content: [ { type: "text", text: "<json>" } ] }
+    content = raw.get("content") or []
+    if isinstance(content, list) and len(content) > 0:
+        first = content[0]
+        if isinstance(first, dict) and first.get("type") == "text":
+            text = first.get("text")
+            if isinstance(text, str) and text.strip():
+                try:
+                    return json.loads(text)
+                except json.JSONDecodeError:
+                    pass
+    return raw
 
 
 def get_hospitals_via_gateway(severity: str, limit: int = 3) -> dict[str, Any]:
