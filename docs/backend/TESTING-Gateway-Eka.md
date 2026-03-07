@@ -227,6 +227,105 @@ If the secret is missing or you need to override: set `GATEWAY_GET_HOSPITALS_LAM
 
 ---
 
+## 4b. Eka triage test cases (POST /triage)
+
+Use these to verify **AgentCore triage + Eka** end-to-end: Indian **medications** (brands/forms) and **treatment protocols** (ICMR/RSSDI-style). Prereq: `eval $(python3 scripts/load_api_config.py --exports)` and `RMP_TOKEN` set; triage runtime has Gateway env vars (`python3 scripts/enable_eka_on_runtime.py` already run).
+
+**Base curl (add `-d '...'` from tables below):**
+
+```bash
+eval $(python3 scripts/load_api_config.py --exports)
+curl -s -X POST "${API_URL}triage" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $RMP_TOKEN" \
+  -d '{"symptoms": ["..."]}' | jq .
+```
+
+### Medications (search_indian_medications)
+
+| # | Symptoms / request | What to check in response |
+|---|-------------------|----------------------------|
+| M1 | `["fever", "patient wants Indian paracetamol brands"]` | Recommendations mention **specific Indian brands** (e.g. Modi Lifecare, Lyka Labs) |
+| M2 | `["sore throat", "need Indian amoxicillin or equivalent"]` | Indian antibiotic brands or generic amoxicillin brands |
+| M3 | `["mild pain", "prefer Indian ibuprofen tablet brands"]` | Ibuprofen tablets with Indian manufacturer names |
+| M4 | `["acid reflux", "Indian omeprazole or antacid brands"]` | Indian brands for omeprazole/antacids |
+| M5 | `["diabetes", "patient asks for metformin brands available in India"]` | Metformin with Indian brand names |
+| M6 | `["cough", "Indian cough syrup brands for adults"]` | Syrup form, Indian brands |
+
+**Example (M1):**
+
+```bash
+curl -s -X POST "${API_URL}triage" -H "Content-Type: application/json" -H "Authorization: Bearer $RMP_TOKEN" \
+  -d '{"symptoms": ["fever", "patient wants Indian paracetamol brands"]}' | jq .
+```
+
+### Treatment protocols (search_treatment_protocols)
+
+| # | Symptoms / request | What to check in response |
+|---|-------------------|----------------------------|
+| P1 | `["fever", "what is the recommended treatment protocol for fever?"]` | Recommendations reference a **protocol** (e.g. stepwise management, when to seek care) |
+| P2 | `["high blood sugar", "diabetes management protocol"]` | Protocol-style guidance (diet, monitoring, when to escalate) |
+| P3 | `["high BP", "hypertension treatment protocol India"]` | Hypertension protocol (lifestyle, drugs, follow-up) |
+| P4 | `["acute diarrhoea", "ORS and dehydration protocol"]` | ORS/dehydration protocol (ICMR-style) |
+| P5 | `["respiratory infection", "antibiotic protocol for respiratory tract"]` | Protocol for respiratory infections (when to use antibiotics) |
+| P6 | `["child fever", "paediatric fever protocol"]` | Paediatric fever protocol (dosing, red flags) |
+
+**Example (P1):**
+
+```bash
+curl -s -X POST "${API_URL}triage" -H "Content-Type: application/json" -H "Authorization: Bearer $RMP_TOKEN" \
+  -d '{"symptoms": ["fever", "what is the recommended treatment protocol for fever?"]}' | jq .
+```
+
+### Combined (medications + protocols)
+
+| # | Symptoms / request | What to check |
+|---|-------------------|----------------|
+| C1 | `["fever and cough", "Indian paracetamol brands and fever protocol"]` | Both **Indian brands** and **protocol**-style steps in recommendations |
+| C2 | `["diabetes", "metformin brands in India and diabetes management protocol"]` | Indian metformin brands + protocol (diet/monitoring/escalation) |
+
+### Pure triage (no Eka needed)
+
+| # | Symptoms | What to check |
+|---|----------|----------------|
+| T1 | `["chest pain", "shortness of breath"]` | Severity likely high; recommendations (e.g. emergency); **no** need for Indian brands/protocols |
+| T2 | `["minor cut on finger"]` | Low severity, first aid; Eka may not be called |
+
+### Edge / negative
+
+| # | Symptoms / request | What to check |
+|---|-------------------|----------------|
+| E1 | `["fever"]` (no mention of India or protocol) | Valid triage; Eka may or may not be used (model choice) |
+| E2 | `["patient wants obscure drug XYZ 123"]` | Safe response even if Eka returns no/empty results; no crash |
+
+### Quick copy-paste set
+
+```bash
+eval $(python3 scripts/load_api_config.py --exports)
+
+# Medications
+curl -s -X POST "${API_URL}triage" -H "Content-Type: application/json" -H "Authorization: Bearer $RMP_TOKEN" \
+  -d '{"symptoms": ["fever", "patient wants Indian paracetamol brands"]}' | jq .recommendations
+
+curl -s -X POST "${API_URL}triage" -H "Content-Type: application/json" -H "Authorization: Bearer $RMP_TOKEN" \
+  -d '{"symptoms": ["sore throat", "need Indian amoxicillin brands"]}' | jq .recommendations
+
+# Protocols
+curl -s -X POST "${API_URL}triage" -H "Content-Type: application/json" -H "Authorization: Bearer $RMP_TOKEN" \
+  -d '{"symptoms": ["fever", "what is the treatment protocol for fever?"]}' | jq .recommendations
+
+curl -s -X POST "${API_URL}triage" -H "Content-Type: application/json" -H "Authorization: Bearer $RMP_TOKEN" \
+  -d '{"symptoms": ["acute diarrhoea", "ORS and dehydration protocol"]}' | jq .recommendations
+
+# Combined
+curl -s -X POST "${API_URL}triage" -H "Content-Type: application/json" -H "Authorization: Bearer $RMP_TOKEN" \
+  -d '{"symptoms": ["fever and cough", "Indian paracetamol brands and fever protocol"]}' | jq .recommendations
+```
+
+**Pass criteria:** Responses are 200, include `severity`, `recommendations`, `safety_disclaimer`. For M1–M6 look for Indian brand names; for P1–P6 look for protocol-style guidance; for C1–C2 look for both.
+
+---
+
 ## 5. Checklist
 
 | Test | Description | Pass |
@@ -239,6 +338,9 @@ If the secret is missing or you need to override: set `GATEWAY_GET_HOSPITALS_LAM
 | `PYTHONPATH=src pytest tests/` | Existing and gateway_eka tests pass | ☐ |
 | POST /triage (no Eka) | 200, valid triage result | ☐ |
 | POST /triage (with Eka) | 200 when Gateway + Eka configured | ☐ |
+| POST /triage (Eka medications) | M1–M6: Indian brands in recommendations | ☐ |
+| POST /triage (Eka protocols) | P1–P6: Protocol-style guidance in recommendations | ☐ |
+| POST /triage (Eka combined) | C1–C2: Both brands and protocol | ☐ |
 | POST /hospitals (AgentCore) | 200, hospitals array | ☐ |
 | Gateway setup script | Creates/updates Gateway and config | ☐ |
 
@@ -248,3 +350,4 @@ If the secret is missing or you need to override: set `GATEWAY_GET_HOSPITALS_LAM
 
 - [RELEASE-Gateway-Eka-Integration.md](./RELEASE-Gateway-Eka-Integration.md)
 - [agentcore-gateway-manual-steps.md](./agentcore-gateway-manual-steps.md)
+- [EKA-VALIDATION-RUNBOOK.md](./EKA-VALIDATION-RUNBOOK.md) – E1–E5: config check, direct Lambda test (stub vs real), response shape

@@ -83,10 +83,19 @@ AI_Hackathon_Triage/
    curl -s "${API_URL}health"
    ```
 
+3. **Frontend (web / Android)** – Base URL, auth, and full flow (triage → hospitals → route) are in [docs/frontend/API-Integration-Guide.md](docs/frontend/API-Integration-Guide.md). Triage request/response and session_id: [docs/frontend/triage-api-contract.md](docs/frontend/triage-api-contract.md). RMP sign-in: [docs/frontend/RMP-AUTH.md](docs/frontend/RMP-AUTH.md).
+
+---
+
+## Hackathon submission
+
+**Evaluators:** See **[HACKATHON.md](HACKATHON.md)** for problem, solution, features, quick start (curl), Eka triage test cases, demo flow, and full doc index.
+
 ## Documentation
 
 | Document | Description |
 |----------|-------------|
+| **[HACKATHON.md](HACKATHON.md)** | **Hackathon submission:** problem, solution, quick start, Eka demo, doc index |
 | [requirements.md](docs/backend/requirements.md) | User stories, acceptance criteria, glossary |
 | [design.md](docs/backend/design.md) | Architecture, components, data models |
 | [implementation-history.md](docs/backend/implementation-history.md) | Decisions, phases, fixes |
@@ -94,9 +103,10 @@ AI_Hackathon_Triage/
 | [OBSERVABILITY.md](docs/backend/OBSERVABILITY.md) | Triage/Hospital Matcher logs, CloudWatch Insights, trace review |
 | [agentcore-implementation-plan.md](docs/backend/agentcore-implementation-plan.md) | AgentCore phases (AC-1–AC-4) |
 | [RELEASE-Gateway-Eka-Integration.md](docs/backend/RELEASE-Gateway-Eka-Integration.md) | **AC-1 release:** Gateway + Eka wiring, config, quick test |
-| [TESTING-Gateway-Eka.md](docs/backend/TESTING-Gateway-Eka.md) | Unit, integration, and API testing for Gateway/Eka |
-| [agentcore-gateway-manual-steps.md](docs/backend/agentcore-gateway-manual-steps.md) | Gateway setup script and env vars |
-| [TODO.md](docs/backend/TODO.md) | Backend TODO (Gateway done; AC-2–AC-4 next) |
+| [TESTING-Gateway-Eka.md](docs/backend/TESTING-Gateway-Eka.md) | Unit, integration, **Eka triage test cases** (medications, protocols) |
+| [agentcore-gateway-manual-steps.md](docs/backend/agentcore-gateway-manual-steps.md) | Gateway setup, **Eka on triage runtime** |
+| [TODO.md](docs/backend/TODO.md) | Backend TODO and status |
+| **Frontend** | [API-Integration-Guide](docs/frontend/API-Integration-Guide.md), [triage-api-contract](docs/frontend/triage-api-contract.md), [RMP-AUTH](docs/frontend/RMP-AUTH.md) |
 
 ## Tech Stack
 

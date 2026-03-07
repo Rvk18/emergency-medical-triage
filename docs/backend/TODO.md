@@ -1,16 +1,20 @@
 # Backend TODO – AgentCore / Gateway
 
-**Branch:** `feature/ac4-routing-identity` (merge to `main` when ready). For next work, create a new branch from `main`.  
-**Last updated:** Mar 2026
+# Backend TODO – AgentCore / Gateway
+
+**Branch:** `feature/ac4-continue` (merge to `main` for hackathon submission). For next work, create a new branch from `main`.  
+**Last updated:** Feb 2026
 
 ---
 
 ## Status
 
 - **AC-1 (Gateway + Eka):** Done. Hospital Matcher → Gateway (A), Eka as Gateway target (B), Triage → Eka (C). See [RELEASE-Gateway-Eka-Integration.md](./RELEASE-Gateway-Eka-Integration.md) and [TESTING-Gateway-Eka.md](./TESTING-Gateway-Eka.md).
+- **Eka on triage runtime:** Done. Script `scripts/enable_eka_on_runtime.py` sets Gateway env vars on the AgentCore triage runtime via Control API. Triage recommendations can include Indian medications and treatment protocols. See [agentcore-gateway-manual-steps.md](./agentcore-gateway-manual-steps.md) Step 4c and [TESTING-Gateway-Eka.md](./TESTING-Gateway-Eka.md) §4b for test cases.
 - **AC-2 (Triage on AgentCore):** Done. Triage agent in `agentcore/agent/triage_agent.py`; POST /triage invokes AgentCore when `USE_AGENTCORE_TRIAGE` and `TRIAGE_AGENT_RUNTIME_ARN` set; observability in [OBSERVABILITY.md](./OBSERVABILITY.md).
 - **AC-3 (Memory + Hospital MCP):** In progress. Optional `session_id` / `patient_id` on /triage and /hospitals; passed to AgentCore as `runtimeSessionId` for memory continuity. Hospital Matcher uses Gateway get_hospitals (MCP). See [agentcore-implementation-plan.md](./agentcore-implementation-plan.md).
-- **AC-4 (Routing + Identity):** **Routing pipeline done.** POST /route works (Route Lambda → Gateway maps-target___get_directions → Maps Lambda; returns stub when Google Maps API key not set). RMP auth (Cognito) on /triage, /hospitals, /route. Routing agent and Gateway routing target exist; Hospital Matcher can call routing-target___get_route. **Next:** Guardrails G1–G3, Policy, optional real Google Maps. See [AC4-Routing-Identity-Design.md](./AC4-Routing-Identity-Design.md) and [NEXT-SESSION.md](./NEXT-SESSION.md) for what to work on tomorrow.
+- **AC-4 (Routing + Identity):** **Routing pipeline done.** POST /route works (Route Lambda → Gateway maps-target___get_directions → Maps Lambda; returns stub when Google Maps API key not set). RMP auth (Cognito) on /triage, /hospitals, /route. Routing agent and Gateway routing target exist; Hospital Matcher can call routing-target___get_route. **Next:** Guardrails G1–G3, Policy, optional real Google Maps. See [AC4-Routing-Identity-Design.md](./AC4-Routing-Identity-Design.md) and [NEXT-SESSION.md](./NEXT-SESSION.md).
+- **Hackathon submission:** Docs updated. See [HACKATHON.md](../../HACKATHON.md) at repo root (problem, solution, quick start, Eka test cases, demo flow). Frontend docs: [API-Integration-Guide.md](../frontend/API-Integration-Guide.md), [triage-api-contract.md](../frontend/triage-api-contract.md).
 
 ---
 
@@ -44,6 +48,6 @@ See **[NEXT-SESSION.md](./NEXT-SESSION.md)** for a concise list: Google Maps key
 - [TESTING-Gateway-Eka.md](./TESTING-Gateway-Eka.md) – Unit, integration, API tests
 - [secrets.md](./secrets.md) – Terraform-created secrets, api_config keys, gateway-config (client_info.scope), load scripts
 - [agentcore-implementation-plan.md](./agentcore-implementation-plan.md) – Phases, architecture
-- [agentcore-gateway-manual-steps.md](./agentcore-gateway-manual-steps.md) – Gateway setup (use `python3` for scripts)
+- [agentcore-gateway-manual-steps.md](./agentcore-gateway-manual-steps.md) – Gateway setup, **Eka on triage runtime** (`enable_eka_on_runtime.py`)
 - [OBSERVABILITY.md](./OBSERVABILITY.md) – Triage/Hospital Matcher logs, trace review
 - [implementation-history.md](./implementation-history.md) – History, fixes

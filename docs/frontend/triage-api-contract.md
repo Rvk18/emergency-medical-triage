@@ -11,7 +11,7 @@ This doc matches the backend implementation and what the mobile app must send/re
 
 1. **API Gateway** forwards `POST /triage` to the **Triage Lambda**.
 2. **Lambda** (`src/triage/api/handler.py`) parses JSON body into `TriageRequest`, calls `assess_triage(request)`.
-3. **Core** (`src/triage/core/agent.py`) uses Bedrock (Agent or Converse API) with a tool `submit_triage_result`; the model returns severity, confidence, recommendations; if confidence < 85%, backend sets `force_high_priority: true`.
+3. **Core** (`src/triage/core/agent.py`) uses Bedrock (AgentCore or Converse API) with tools; if **Eka** is enabled (Gateway env vars on triage runtime), the model can call `search_indian_medications` and `search_treatment_protocols`. Recommendations may then include **Indian drug brands** and **treatment protocol** steps (e.g. ICMR-style).
 4. **Response** is validated with `TriageResult` Pydantic model and returned as JSON.
 
 ---
@@ -106,6 +106,7 @@ This doc matches the backend implementation and what the mobile app must send/re
 - **Endpoint:** `POST /triage` → full URL: `https://vrxlwtzfff.execute-api.us-east-1.amazonaws.com/dev/triage`
 - **Input:** `symptoms` (required, ≥1), `vitals` (optional dict), optional `age_years`, `sex`.
 - **Output:** `severity`, `confidence`, `recommendations`, `force_high_priority`, `safety_disclaimer`.
+- **Eka:** When the user asks for Indian brands or treatment protocols (e.g. in symptoms or free text), `recommendations` may include Indian drug names (e.g. Modi Lifecare, Lyka Labs) and/or protocol-style steps (e.g. ORS, WHO dehydration). Display as-is.
 - When integrating the real API in the app, map `SymptomInput`/`VitalsInput`/`PatientInfo` → request JSON, and response JSON → `TriageResult` (with `emergencyId` generated or from a future backend field).
 
 ---

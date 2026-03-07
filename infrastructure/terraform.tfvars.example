@@ -16,3 +16,8 @@ db_password = "CHANGE_ME_STRONG_PASSWORD"
 
 # Google Maps (optional – real directions for POST /route; leave empty for stub)
 # google_maps_api_key   = "AIza..."
+
+# Eka Care (optional – Indian drugs, treatment protocols via Gateway). Requires Client ID + Client Secret; Lambda uses login API to get access token.
+# Get both from https://console.eka.care . See https://developer.eka.care/user-guides/get-started
+# eka_api_key        = "your-client-id"
+# eka_client_secret  = "your-client-secret"

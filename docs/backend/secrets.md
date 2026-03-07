@@ -12,7 +12,7 @@ All of these secrets are **created and updated by Terraform** when you run `terr
 | **gateway-config** | AgentCore Gateway OAuth and config (populated by **setup_agentcore_gateway.py**, not Terraform) | `gateway_url`, `gateway_id`, `region`, `client_info` (client_id, client_secret, token_endpoint, **scope** e.g. `emergency-triage-hospitals/invoke`, user_pool_id, domain_prefix), `target_name`, `lambda_arn`, optional `eka_target_name`, `maps_target_name`, `routing_target_name`, etc. **Route Lambda** reads this secret and uses `client_info.scope` when requesting an OAuth token. |
 | **bedrock-config** | Bedrock region and model | `region`, `model_id` |
 | **rds-config** | Aurora connection (IAM auth, no password) | `host`, `port`, `database`, `username`, `region` |
-| **eka-config** | Eka Care API (only if `eka_api_key` set in tfvars) | `api_key`, `client_id` |
+| **eka-config** | Eka Care API (only if `eka_api_key` set in tfvars) | `client_id`, `client_secret` (both required for Eka login; Lambda gets access_token via POST /connect-auth/v1/account/login). Legacy: `api_key` = client_id. |
 
 ---
 

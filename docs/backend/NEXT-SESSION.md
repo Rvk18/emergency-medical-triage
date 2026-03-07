@@ -17,7 +17,8 @@
    - With key set, POST /route returns real `distance_km`, `duration_minutes`, `directions_url`. Frontend guide: [API-Integration-Guide.md](../frontend/API-Integration-Guide.md).
 
 2. **Eka validation (ROADMAP E1–E5)**
-   - Confirm Eka Gateway returns useful data vs stub; document. See [ROADMAP-after-AC4.md](./ROADMAP-after-AC4.md) §3.
+   - **E1–E3 done:** Runbook and response shape doc: [EKA-VALIDATION-RUNBOOK.md](./EKA-VALIDATION-RUNBOOK.md). Use it to confirm Eka config/secret, run direct Lambda test (E2), and interpret stub vs real. E4–E5: triage flow that uses Eka; decide “useful” bar and document.
+   - See [ROADMAP-after-AC4.md](./ROADMAP-after-AC4.md) §3.
 
 3. **Guardrails & compliance (AC-4 scope)**
    - G1–G3 (input/output validation, safety prompts), Policy. See [AC4-Routing-Identity-Design.md](./AC4-Routing-Identity-Design.md) and [ROADMAP-after-AC4.md](./ROADMAP-after-AC4.md) §2.
@@ -32,6 +33,8 @@
 | Doc | Purpose |
 |-----|--------|
 | [TODO.md](./TODO.md) | Backend TODO and phase status |
+| [EKA-VALIDATION-RUNBOOK.md](./EKA-VALIDATION-RUNBOOK.md) | Eka E1–E5: config check, direct Lambda test, response shape, stub vs real |
+| [EKA-MCP-ROADMAP.md](./EKA-MCP-ROADMAP.md) | Eka MCP: what we have (medications, protocols, publishers, pharmacology) and what we can add (e.g. SNOMED) |
 | [ROADMAP-after-AC4.md](./ROADMAP-after-AC4.md) | Post AC-4 roadmap (Eka, HIPAA, guardrails) |
 | [TESTING-Pipeline-curl.md](./TESTING-Pipeline-curl.md) | Curl tests for triage → hospitals → route |
 | [agentcore-gateway-manual-steps.md](./agentcore-gateway-manual-steps.md) | Gateway setup; use `python3` for scripts |

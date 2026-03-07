@@ -71,11 +71,17 @@ Do not store these in code; they are in Secrets Manager only. Local `gateway_con
 
 ### Step 4c: Wire Triage to Eka (optional)
 
-To let the Triage Converse flow use Eka tools (search_indian_medications, search_treatment_protocols), set the same Gateway env vars on the **Triage Lambda** (e.g. in Console or Terraform):
+**If triage uses Converse (use_agentcore_triage = false):**  
+The Triage Lambda loads Gateway config from the **gateway-config** secret (GATEWAY_CONFIG_SECRET_NAME). Ensure `python3 scripts/setup_agentcore_gateway.py` has been run so the secret contains `gateway_url` and `client_info`. Then POST /triage will use Eka when the model calls search_indian_medications / search_treatment_protocols.
 
-- `GATEWAY_MCP_URL`, `GATEWAY_CLIENT_ID`, `GATEWAY_CLIENT_SECRET`, `GATEWAY_TOKEN_ENDPOINT`, optional `GATEWAY_SCOPE`
+**If triage uses AgentCore (use_agentcore_triage = true):**  
+The Lambda invokes the **AgentCore Runtime** (triage_agent); the Converse path and Lambda gateway_config are not used. To use Eka, set the same Gateway **env vars on the AgentCore Runtime**:
 
-Ensure the Eka target is added to the Gateway (run setup script with `--eka <eka_lambda_arn>`). Then POST /triage will use Eka when the model requests drug or protocol lookups.
+- **Option A – Script (recommended):** From project root, run `python3 scripts/enable_eka_on_runtime.py`. This reads the gateway-config secret and triage_agent_runtime_arn from infrastructure/terraform.tfvars and sets GATEWAY_MCP_URL, GATEWAY_CLIENT_ID, GATEWAY_CLIENT_SECRET, GATEWAY_TOKEN_ENDPOINT, and GATEWAY_SCOPE on the triage runtime. Use --dry-run to print vars without updating. If the script cannot find the ARN, use `--tfvars path/to/infrastructure/terraform.tfvars`. **IAM:** Your user/role needs `bedrock-agentcore:GetAgentRuntime` and `bedrock-agentcore:UpdateAgentRuntime`; if you get AccessDeniedException, add those actions to your IAM policy (see [runtime permissions](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/runtime-permissions.html)).
+
+- **Option B – Console:** Get values with `eval $(python3 scripts/load_gateway_config.py)` and add the five variables in AWS Console → Bedrock → AgentCore → Runtimes → triage runtime → configuration/environment.
+
+Ensure the Eka target is added to the Gateway (setup script with Eka). Then the triage agent on the runtime can call Eka tools.
 
 ## Lambda Handler Format (Reference)
 

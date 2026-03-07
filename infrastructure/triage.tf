@@ -2,12 +2,13 @@
 
 resource "null_resource" "build_triage_lambda" {
   triggers = {
-    src_models = filesha256("${path.module}/../src/triage/models/triage.py")
-    src_db     = filesha256("${path.module}/../src/triage/core/db.py")
-    src_agent  = filesha256("${path.module}/../src/triage/core/agent.py")
-    src_tools  = filesha256("${path.module}/../src/triage/core/tools.py")
-    src_gw     = filesha256("${path.module}/../src/triage/core/gateway_client.py")
-    script     = filesha256("${path.module}/../scripts/build_triage_lambda.sh")
+    src_models     = filesha256("${path.module}/../src/triage/models/triage.py")
+    src_db         = filesha256("${path.module}/../src/triage/core/db.py")
+    src_agent      = filesha256("${path.module}/../src/triage/core/agent.py")
+    src_tools      = filesha256("${path.module}/../src/triage/core/tools.py")
+    src_gw         = filesha256("${path.module}/../src/triage/core/gateway_client.py")
+    src_instructions = filesha256("${path.module}/../src/triage/core/instructions.py")
+    script        = filesha256("${path.module}/../scripts/build_triage_lambda.sh")
   }
   provisioner "local-exec" {
     command     = "bash ${path.module}/../scripts/build_triage_lambda.sh"
@@ -65,6 +66,11 @@ resource "aws_iam_role_policy" "triage_lambda_rds" {
       },
       {
         Effect   = "Allow"
+        Action   = ["secretsmanager:GetSecretValue"]
+        Resource = aws_secretsmanager_secret.gateway_config.arn
+      },
+      {
+        Effect   = "Allow"
         Action   = ["rds-db:connect"]
         Resource = "arn:aws:rds-db:${var.aws_region}:${data.aws_caller_identity.current.account_id}:dbuser:${aws_rds_cluster.aurora.cluster_resource_id}/${var.db_username}"
       }
@@ -119,6 +125,7 @@ resource "aws_lambda_function" "triage" {
       BEDROCK_AGENT_ALIAS_ID      = var.bedrock_agent_alias_id
       BEDROCK_MODEL_ID            = var.bedrock_model_id
       RDS_CONFIG_SECRET           = aws_secretsmanager_secret.rds_config.name
+      GATEWAY_CONFIG_SECRET_NAME  = aws_secretsmanager_secret.gateway_config.name
       USE_AGENTCORE_TRIAGE        = tostring(var.use_agentcore_triage)
       TRIAGE_AGENT_RUNTIME_ARN    = var.triage_agent_runtime_arn
     }

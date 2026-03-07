@@ -63,10 +63,10 @@
 
 | # | Item | Notes |
 |---|------|--------|
-| E1 | **Eka secret and config check** | Confirm eka_api_key is set in Terraform (or secret exists), Eka Lambda has EKA_CONFIG_SECRET_NAME, and Gateway has Eka target. Document in runbook. |
-| E2 | **Direct Eka Lambda test** | Invoke the Eka Lambda with test events (e.g. drug_name "Paracetamol", protocols query) and log response: real list vs stub (e.g. "Sample medication"). |
-| E3 | **Eka response shape doc** | Document actual JSON shape for medications and protocols (real Eka API response); when stub is returned (no secret / API error). |
-| E4 | **Triage flow that uses Eka** | Run a triage request where the model is likely to call Eka (e.g. drug name in symptoms or “suitable medication”) and confirm in logs/traces that Gateway was called and tool result returned. |
+| E1 | **Eka secret and config check** | Confirm eka_api_key is set in Terraform (or secret exists), Eka Lambda has EKA_CONFIG_SECRET_NAME, and Gateway has Eka target. **Runbook:** [EKA-VALIDATION-RUNBOOK.md](./EKA-VALIDATION-RUNBOOK.md) §E1. |
+| E2 | **Direct Eka Lambda test** | Invoke the Eka Lambda with test events (e.g. drug_name "Paracetamol", protocols query) and log response: real list vs stub. **Runbook:** [EKA-VALIDATION-RUNBOOK.md](./EKA-VALIDATION-RUNBOOK.md) §E2. |
+| E3 | **Eka response shape doc** | Document actual JSON shape for medications and protocols; when stub is returned. **Runbook:** [EKA-VALIDATION-RUNBOOK.md](./EKA-VALIDATION-RUNBOOK.md) §E3. |
+| E4 | **Triage flow that uses Eka** | Run a triage request where the model is likely to call Eka (e.g. drug name in symptoms or “suitable medication”) and confirm in logs/traces that Gateway was called and tool result returned. **Runbook:** §E4. |
 | E5 | **Decide “useful” bar** | If Eka returns real data: document sample queries and use in testing. If only stub: document “Eka stub mode” and steps to enable real Eka (key, API contract). |
 
 **Suggested order:** E1 → E2 → E3 → E4 → E5.
