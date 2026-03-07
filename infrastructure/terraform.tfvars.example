@@ -13,3 +13,6 @@ db_password = "CHANGE_ME_STRONG_PASSWORD"
 # enable_bastion        = true
 # bastion_ssh_public_key = "ssh-rsa AAAA... your@email"
 # bastion_allowed_cidr   = "YOUR_IP/32"   # e.g. curl -s ifconfig.me
+
+# Google Maps (optional – real directions for POST /route; leave empty for stub)
+# google_maps_api_key   = "AIza..."

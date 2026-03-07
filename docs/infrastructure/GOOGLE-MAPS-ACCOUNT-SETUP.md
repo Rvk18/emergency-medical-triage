@@ -26,14 +26,10 @@
 
 1. Go to [APIs & Services → Library](https://console.cloud.google.com/apis/library).
 2. Enable these APIs (search by name, then **Enable**):
-   - **Directions API** (or **Routes API** if you prefer the newer one)
-   - **Geocoding API**
+   - **Routes API** (required for directions; replaces the legacy Directions API for new projects)
+   - **Geocoding API** (for address → lat/lon when origin or destination is an address)
 
-For this backend we use the **classic** APIs:
-- **Directions API**
-- **Geocoding API**
-
-(If you see “Routes API (Compute Routes)” and “Places API (Geocoding)”, the naming may have changed; enable the one that provides directions and address→coordinates.)
+**Note:** New Google Cloud projects get “legacy API not enabled” for the classic Directions API. Use **Routes API** instead; this backend calls `computeRoutes` (POST `https://routes.googleapis.com/directions/v2:computeRoutes`).
 
 ---
 

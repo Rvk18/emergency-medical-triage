@@ -12,6 +12,7 @@ Requires GOOGLE_MAPS_CONFIG_SECRET_NAME env and secret with api_key. If not set,
 import json
 import logging
 import os
+import urllib.error
 import urllib.parse
 import urllib.request
 
@@ -53,35 +54,72 @@ def _geocode(address: str, api_key: str) -> tuple[float, float] | None:
         return None
 
 
-def _directions(origin_lat: float, origin_lon: float, dest_lat: float, dest_lon: float, api_key: str) -> dict | None:
-    """Call Directions API. Return dict with distance_km, duration_minutes, directions_url or None."""
-    origin = f"{origin_lat},{origin_lon}"
-    dest = f"{dest_lat},{dest_lon}"
-    url = "https://maps.googleapis.com/maps/api/directions/json?" + urllib.parse.urlencode({
-        "origin": origin,
-        "destination": dest,
-        "key": api_key,
-    })
+def _parse_duration_seconds(dur_str: str) -> int:
+    """Parse Routes API duration (e.g. '3600s') to seconds."""
+    if not dur_str or not isinstance(dur_str, str):
+        return 0
+    s = dur_str.strip().rstrip("s").strip()
     try:
-        with urllib.request.urlopen(urllib.request.Request(url), timeout=15) as r:
+        return int(float(s))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _directions(origin_lat: float, origin_lon: float, dest_lat: float, dest_lon: float, api_key: str) -> dict | None:
+    """Call Routes API (v2) computeRoutes. Return dict with distance_km, duration_minutes, directions_url or error.
+    Uses POST routes.googleapis.com/directions/v2:computeRoutes (legacy Directions API is deprecated for new projects)."""
+    url = "https://routes.googleapis.com/directions/v2:computeRoutes"
+    payload = {
+        "origin": {"location": {"latLng": {"latitude": origin_lat, "longitude": origin_lon}}},
+        "destination": {"location": {"latLng": {"latitude": dest_lat, "longitude": dest_lon}}},
+        "travelMode": "DRIVE",
+    }
+    body = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(
+        url,
+        data=body,
+        headers={
+            "Content-Type": "application/json",
+            "X-Goog-Api-Key": api_key,
+            "X-Goog-FieldMask": "routes.duration,routes.distanceMeters",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=15) as r:
             data = json.loads(r.read().decode())
-        if data.get("status") != "OK" or not data.get("routes"):
-            return None
-        leg = data["routes"][0]["legs"][0]
-        dist_m = leg["distance"]["value"]
-        dur_s = leg["duration"]["value"]
-        # Deep link to Google Maps (works on web and mobile)
-        dir_url = (
-            f"https://www.google.com/maps/dir/?api=1&origin={origin}&destination={dest}&travelmode=driving"
-        )
-        return {
-            "distance_km": round(dist_m / 1000, 2),
-            "duration_minutes": max(1, round(dur_s / 60)),
-            "directions_url": dir_url,
-        }
+    except urllib.error.HTTPError as e:
+        body_str = ""
+        try:
+            if getattr(e, "fp", None):
+                body_str = e.fp.read().decode("utf-8", errors="replace")
+        except Exception:
+            pass
+        logger.warning("Routes API HTTP %s: %s", e.code, body_str[:500])
+        return {"error": "Directions failed", "detail": f"HTTP {e.code}: {body_str[:300]}"}
     except Exception as e:
         logger.warning("Directions failed: %s", e)
-        return None
+        return {"error": "Directions failed", "detail": str(e)}
+
+    routes = data.get("routes") or []
+    if not routes:
+        err = data.get("error", {})
+        msg = err.get("message", err) if isinstance(err, dict) else json.dumps(data)[:200]
+        logger.warning("Routes API no routes: %s", msg)
+        return {"error": "Directions failed", "detail": msg or "No routes returned"}
+
+    route = routes[0]
+    dist_m = route.get("distanceMeters") or 0
+    dur_str = route.get("duration") or "0s"
+    dur_s = _parse_duration_seconds(dur_str)
+    origin = f"{origin_lat},{origin_lon}"
+    dest = f"{dest_lat},{dest_lon}"
+    dir_url = f"https://www.google.com/maps/dir/?api=1&origin={origin}&destination={dest}&travelmode=driving"
+    return {
+        "distance_km": round(dist_m / 1000, 2),
+        "duration_minutes": max(1, round(dur_s / 60)),
+        "directions_url": dir_url,
+    }
 
 
 def _strip_tool_prefix(full_name: str) -> str:
@@ -159,4 +197,6 @@ def handler(event: dict, context: object) -> dict:
     result = _directions(origin_lat, origin_lon, dest_lat, dest_lon, api_key)
     if result is None:
         return {"error": "Directions failed", "distance_km": None, "duration_minutes": None, "directions_url": None}
+    if result.get("error"):
+        return {**result, "distance_km": result.get("distance_km"), "duration_minutes": result.get("duration_minutes"), "directions_url": result.get("directions_url")}
     return result

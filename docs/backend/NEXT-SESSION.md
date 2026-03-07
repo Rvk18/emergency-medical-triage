@@ -4,16 +4,17 @@
 **Current branch:** `feature/ac4-continue` (created; use this for tomorrow’s work).
 
 **Current state (as of merge):**
-- **AC-4 routing pipeline is working:** POST /route returns stub (`distance_km`, `duration_minutes`, `directions_url`, `stub: true`) when Google Maps API key is not set. Full flow: RMP auth → Route Lambda → AgentCore Gateway (OAuth + MCP 2025-03-26) → maps-target___get_directions → Maps Lambda.
+- **AC-4 routing pipeline is working:** POST /route returns **real directions** when Google Maps API key is set in Secrets Manager: `distance_km`, `duration_minutes`, `directions_url` (no `stub: true`). Fallback stub when key is not set. Full flow: RMP auth → Route Lambda → AgentCore Gateway (OAuth + MCP 2025-03-26) → maps-target___get_directions → Maps Lambda (Google Routes API v2).
 - **Triage, Hospitals, Route** all tested with curl; see [TESTING-Pipeline-curl.md](./TESTING-Pipeline-curl.md). Use `python3 scripts/get_rmp_token.py` for token (not `python` on macOS).
+- **Frontend:** [API-Integration-Guide.md](../frontend/API-Integration-Guide.md) documents for mobile & web: base URL, auth, triage → hospitals → route, and real directions (POST /route).
 
 ---
 
 ## Immediate next steps (pick one or more)
 
-1. **Enable real Google Maps directions**
+1. **Enable real Google Maps directions** *(done when API key is in Secrets Manager)*
    - Add Google Maps API key to Secrets Manager (secret name in `GOOGLE_MAPS_CONFIG_SECRET_NAME`; shape `{"api_key":"YOUR_KEY"}`). See [GOOGLE-MAPS-ACCOUNT-SETUP.md](../infrastructure/GOOGLE-MAPS-ACCOUNT-SETUP.md).
-   - Re-test POST /route; should return real `distance_km`, `duration_minutes`, `directions_url`.
+   - With key set, POST /route returns real `distance_km`, `duration_minutes`, `directions_url`. Frontend guide: [API-Integration-Guide.md](../frontend/API-Integration-Guide.md).
 
 2. **Eka validation (ROADMAP E1–E5)**
    - Confirm Eka Gateway returns useful data vs stub; document. See [ROADMAP-after-AC4.md](./ROADMAP-after-AC4.md) §3.

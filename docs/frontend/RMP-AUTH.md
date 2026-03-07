@@ -2,6 +2,8 @@
 
 **Purpose:** How to sign in as an RMP (Registered Medical Practitioner) and call the protected APIs (POST /triage, POST /hospitals, POST /route). The backend uses **Amazon Cognito User Pools** and **API Gateway Cognito authorizer**.
 
+**For a single guide covering all endpoints (health, triage, hospitals, route) and recommended flow for mobile & web:** see [API-Integration-Guide.md](./API-Integration-Guide.md).
+
 ---
 
 ## 1. Configuration (from backend / Terraform)
@@ -225,6 +227,7 @@ Users are created in the Cognito User Pool. Options:
 
 ## References
 
+- [API-Integration-Guide.md](./API-Integration-Guide.md) – Single guide for mobile & web: base URL, auth, triage → hospitals → route, real directions (POST /route).
 - [AWS Amplify Auth](https://docs.amplify.aws/react/build-a-backend/auth/)
 - [Cognito User Pools](https://docs.aws.amazon.com/cognito/latest/developerguide/cognito-user-identity-pools.html)
 - [API Gateway Cognito authorizer](https://docs.aws.amazon.com/apigateway/latest/developerguide/apigateway-integrate-with-cognito.html)
