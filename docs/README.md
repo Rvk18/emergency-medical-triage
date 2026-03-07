@@ -21,7 +21,7 @@ Central documentation for the Emergency Medical Triage project.
 **See [ROADMAP-NEXT.md](ROADMAP-NEXT.md)** for the ordered plan:
 
 1. **Redeploy AgentCore** ✅ Done – G3 prompts live (Hospital Matcher, Triage, Routing); enable_eka_on_runtime run after triage.
-2. **Policy** – When AgentCore Policy is GA, restrict tools per agent.
+2. **Policy** ✅ – AgentCore Policy GA; policy engine on Gateway via `scripts/setup_agentcore_policy.py`. All eight tools (get_hospitals, four Eka, get_route, get_directions, geocode_address) in allowlist. See [backend/POLICY-RUNBOOK.md](backend/POLICY-RUNBOOK.md) and [POLICY-RCA.md](backend/POLICY-RCA.md).
 3. **HIPAA H1–H4** – Document PHI, encryption, access, audit.
 4. **AC-3 re-test** – Session continuity (same session_id across triage → hospitals).
 5. **Deploy web app + frontend integration** – Deploy `frontend/web/`, wire API URL, Cognito, triage → hospitals → route, session_id.  
@@ -52,7 +52,7 @@ Central documentation for the Emergency Medical Triage project.
 | [TESTING-Pipeline-curl.md](backend/TESTING-Pipeline-curl.md) | Full pipeline curl (triage → hospitals → route), RMP token |
 | [TESTING-Gateway-Eka.md](backend/TESTING-Gateway-Eka.md) | Unit/integration tests, **Eka triage test cases** (M1–M6 medications, P1–P6 protocols, C1–C2 combined) |
 | [EKA-VALIDATION-RUNBOOK.md](backend/EKA-VALIDATION-RUNBOOK.md) | E1–E5: Eka config, direct Lambda test, response shape |
-| [API-TEST-RESULTS.md](backend/API-TEST-RESULTS.md) | One-curl-per-endpoint test matrix; working vs not (health, triage, hospitals, route). |
+| [API-TEST-RESULTS.md](backend/API-TEST-RESULTS.md) | One-curl-per-endpoint test matrix; health, triage, hospitals, route; **Eka tools** get_protocol_publishers and search_pharmacology (curl + direct Lambda). |
 | [DEPLOY.md](../DEPLOY.md) | Why post-Terraform scripts exist; deploy order (terraform → setup_agentcore_gateway → enable_gateway_on_* after agentcore deploy). |
 | [HIPAA-Compliance-Checklist.md](backend/HIPAA-Compliance-Checklist.md) | H1–H4: PHI scope, encryption, access control, audit logging |
 | [agentcore-gateway-manual-steps.md](backend/agentcore-gateway-manual-steps.md) | Gateway setup script, Eka on triage runtime (`enable_eka_on_runtime.py`) |
