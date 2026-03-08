@@ -136,6 +136,7 @@ RMP Learning API: [docs/frontend/RMP-LEARNING-API.md](docs/frontend/RMP-LEARNING
 | **[PROJECT-SUMMARY.md](PROJECT-SUMMARY.md)** | **Submission #5:** one-pager; fill in MVP/video/PPT links |
 | **[SUBMISSION-CHECKLIST.md](SUBMISSION-CHECKLIST.md)** | Big 5 checklist, GitHub public, MVP runbook link |
 | [docs/ROADMAP-MODULES.md](docs/ROADMAP-MODULES.md) | Modules A/B/C/D: what is what, plan ahead |
+| [docs/ARCHITECTURE-PROMPT.md](docs/ARCHITECTURE-PROMPT.md) | **Architecture (submission):** detailed doc + diagram prompts + Mermaid |
 | [docs/frontend/API-Integration-Guide.md](docs/frontend/API-Integration-Guide.md) | Base URL, auth, triage → hospitals → route, RMP Learning |
 | [docs/frontend/RMP-LEARNING-API.md](docs/frontend/RMP-LEARNING-API.md) | RMP Learning endpoints and frontend instructions |
 | [docs/backend/API-TEST-RESULTS.md](docs/backend/API-TEST-RESULTS.md) | One-curl-per-endpoint test matrix, RMP Learning curls |

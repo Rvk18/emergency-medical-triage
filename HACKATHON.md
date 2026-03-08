@@ -64,6 +64,8 @@ We **augment RMPs** (not replace them) with:
 - **Hospitals:** AgentCore Hospital Matcher; Gateway target get_hospitals.
 - **Route:** Route Lambda calls Gateway maps-target/routing-target for directions.
 
+**Detailed architecture (for submission):** See **[docs/ARCHITECTURE-PROMPT.md](docs/ARCHITECTURE-PROMPT.md)** — as-built components, data flow, copy-paste prompts for high-level and detailed diagrams, and Mermaid diagrams.
+
 ---
 
 ## Quick Start (Judges / Evaluators)
@@ -130,6 +132,7 @@ See **docs/backend/TESTING-Gateway-Eka.md** §4b for full list. Examples:
 | [docs/backend/TESTING-Gateway-Eka.md](docs/backend/TESTING-Gateway-Eka.md) | Eka triage test cases (medications, protocols, combined) |
 | [docs/backend/EKA-VALIDATION-RUNBOOK.md](docs/backend/EKA-VALIDATION-RUNBOOK.md) | Eka config, Lambda test, response shape |
 | [docs/backend/API-TEST-RESULTS.md](docs/backend/API-TEST-RESULTS.md) | One-curl-per-endpoint matrix, RMP Learning curls |
+| [docs/ARCHITECTURE-PROMPT.md](docs/ARCHITECTURE-PROMPT.md) | **Architecture (submission):** detailed doc, diagram prompts, Mermaid |
 | [docs/backend/agentcore-gateway-manual-steps.md](docs/backend/agentcore-gateway-manual-steps.md) | Gateway setup, Eka on triage runtime |
 | [docs/backend/secrets.md](docs/backend/secrets.md) | Terraform secrets, api_config, load scripts |
 | [docs/MVP-DEPLOY-RUNBOOK.md](docs/MVP-DEPLOY-RUNBOOK.md) | Deploy web on AWS; mobile APK/Drive for submission #3 |
