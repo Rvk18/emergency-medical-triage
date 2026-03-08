@@ -34,11 +34,24 @@ import com.medtriage.app.ui.theme.Spacing
 @Composable
 fun RoleSelectorScreen(
     darkTheme: Boolean = false,
+    selectedLangCode: String = "en",
     onDarkThemeChange: (Boolean) -> Unit = {},
+    onLanguageSelected: (String) -> Unit = {},
     onSelectRole: (role: String) -> Unit
 ) {
     val screenBackground = MaterialTheme.colorScheme.background
     val onBackgroundColor = MaterialTheme.colorScheme.onBackground
+    val onSurfaceColor = MaterialTheme.colorScheme.onSurface
+
+    val LOGIN_LANGUAGES = listOf(
+        "en" to "English",
+        "hi" to "हिन्दी",
+        "ta" to "தமிழ்",
+        "te" to "తెలుగు",
+        "kn" to "ಕನ್ನಡ",
+        "ml" to "മലയാളം",
+        "bn" to "বাংলা"
+    )
 
     Box(
         modifier = Modifier
@@ -175,6 +188,52 @@ fun RoleSelectorScreen(
                 }
 
                 Spacer(modifier = Modifier.height(Spacing.space24))
+                
+                // Language Selection Block
+                Text(
+                    text = "Language / भाषा",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = onSurfaceColor.copy(alpha = 0.9f),
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    LOGIN_LANGUAGES.take(4).forEach { (code, label) ->
+                        androidx.compose.material3.FilterChip(
+                            selected = selectedLangCode == code,
+                            onClick = { onLanguageSelected(code) },
+                            label = { Text(label, color = if (selectedLangCode == code) androidx.compose.ui.graphics.Color.White else onSurfaceColor.copy(alpha = 0.9f)) },
+                            colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                selectedLabelColor = androidx.compose.ui.graphics.Color.White,
+                                containerColor = if (darkTheme) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f) else MaterialTheme.colorScheme.surfaceVariant,
+                            )
+                        )
+                    }
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    LOGIN_LANGUAGES.drop(4).forEach { (code, label) ->
+                        androidx.compose.material3.FilterChip(
+                            selected = selectedLangCode == code,
+                            onClick = { onLanguageSelected(code) },
+                            label = { Text(label, color = if (selectedLangCode == code) androidx.compose.ui.graphics.Color.White else onSurfaceColor.copy(alpha = 0.9f)) },
+                            colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                selectedLabelColor = androidx.compose.ui.graphics.Color.White,
+                                containerColor = if (darkTheme) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f) else MaterialTheme.colorScheme.surfaceVariant,
+                            )
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(Spacing.space24))
+
                 Text(
                     text = "Your selection will determine your access level",
                     style = MaterialTheme.typography.bodySmall,

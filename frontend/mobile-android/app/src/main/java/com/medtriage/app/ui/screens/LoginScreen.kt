@@ -67,14 +67,12 @@ fun LoginScreen(
     onLoginSuccess: () -> Unit,
     onLogin: (emailOrPhone: String, password: String, onResult: (Result<Unit>) -> Unit) -> Unit,
     onBackToRoleSelection: () -> Unit = {},
-    onLanguageSelected: (languageCode: String) -> Unit = {},
     onSettingsClick: () -> Unit = {}
 ) {
     var emailOrPhone by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
     var error by rememberSaveable { mutableStateOf<String?>(null) }
     var isLoading by rememberSaveable { mutableStateOf(false) }
-    var selectedLangCode by rememberSaveable { mutableStateOf("en") }
 
     val screenBackground = if (darkTheme) LoginScreenBackgroundDark else MaterialTheme.colorScheme.background
     val cardBackground = if (darkTheme) LoginCardBackgroundDark else MaterialTheme.colorScheme.surface
@@ -152,56 +150,7 @@ fun LoginScreen(
                     )
                     Spacer(modifier = Modifier.height(20.dp))
 
-                    // Language / भाषा
-                    Text(
-                        text = "Language / भाषा",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = onSurfaceColor.copy(alpha = 0.9f),
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        LOGIN_LANGUAGES.take(5).forEach { (code, label) ->
-                            FilterChip(
-                                selected = selectedLangCode == code,
-                                onClick = {
-                                    selectedLangCode = code
-                                    onLanguageSelected(code)
-                                },
-                                label = { Text(label, color = if (selectedLangCode == code) Color.White else onSurfaceColor.copy(alpha = 0.9f)) },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = MedTriagePrimary,
-                                    selectedLabelColor = Color.White,
-                                    containerColor = if (darkTheme) LoginCardBackgroundDark.copy(alpha = 0.8f) else MaterialTheme.colorScheme.surfaceVariant,
-                                    labelColor = onSurfaceColor.copy(alpha = 0.9f)
-                                )
-                            )
-                        }
-                    }
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        LOGIN_LANGUAGES.drop(5).forEach { (code, label) ->
-                            FilterChip(
-                                selected = selectedLangCode == code,
-                                onClick = {
-                                    selectedLangCode = code
-                                    onLanguageSelected(code)
-                                },
-                                label = { Text(label, color = if (selectedLangCode == code) Color.White else onSurfaceColor.copy(alpha = 0.9f)) },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = MedTriagePrimary,
-                                    selectedLabelColor = Color.White,
-                                    containerColor = if (darkTheme) LoginCardBackgroundDark.copy(alpha = 0.8f) else MaterialTheme.colorScheme.surfaceVariant,
-                                    labelColor = onSurfaceColor.copy(alpha = 0.9f)
-                                )
-                            )
-                        }
-                    }
+                    // Language / भाषा removed, moved to RoleSelector
                     Spacer(modifier = Modifier.height(20.dp))
 
                     OutlinedTextField(

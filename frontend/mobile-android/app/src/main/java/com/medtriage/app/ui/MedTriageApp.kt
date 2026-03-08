@@ -29,10 +29,12 @@ fun MedTriageApp(
                 CircularProgressIndicator()
             }
         }
-        !authState.hasRoleSelected -> {
+        !authState.hasRoleSelected || !authState.hasLanguageSelected -> {
             RoleSelectorScreen(
                 darkTheme = darkTheme,
+                selectedLangCode = authState.languageCode,
                 onDarkThemeChange = appViewModel::setDarkTheme,
+                onLanguageSelected = authViewModel::selectLanguage,
                 onSelectRole = authViewModel::setUserRole
             )
         }
@@ -45,15 +47,7 @@ fun MedTriageApp(
                     authViewModel.login(email, password, onResult)
                 },
                 onBackToRoleSelection = authViewModel::clearUserRole,
-                onLanguageSelected = authViewModel::selectLanguage,
                 onSettingsClick = { }
-            )
-        }
-        !authState.hasLanguageSelected -> {
-            LanguageSelectorScreen(
-                onLanguageSelected = { code ->
-                    authViewModel.selectLanguage(code)
-                }
             )
         }
         else -> {

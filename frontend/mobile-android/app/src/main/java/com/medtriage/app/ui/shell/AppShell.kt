@@ -83,6 +83,16 @@ fun AppShell(
             Column {
                 TopAppBar(
                     title = { Text("MedTriage AI") },
+                    navigationIcon = {
+                        if (navController.previousBackStackEntry != null) {
+                            IconButton(onClick = { navController.popBackStack() }) {
+                                Icon(
+                                    imageVector = androidx.compose.material.icons.Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = "Back"
+                                )
+                            }
+                        }
+                    },
                     actions = {
                         SyncStatusIndicator(status = syncStatus, lastSyncTime = lastSyncTime)
                         Text(
@@ -94,6 +104,7 @@ fun AppShell(
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = androidx.compose.material3.MaterialTheme.colorScheme.primaryContainer,
                         titleContentColor = androidx.compose.material3.MaterialTheme.colorScheme.onPrimaryContainer,
+                        navigationIconContentColor = androidx.compose.material3.MaterialTheme.colorScheme.onPrimaryContainer,
                         actionIconContentColor = androidx.compose.material3.MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 )

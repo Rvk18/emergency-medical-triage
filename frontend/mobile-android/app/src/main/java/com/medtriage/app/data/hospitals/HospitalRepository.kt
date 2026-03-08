@@ -50,8 +50,7 @@ class HospitalRepository @Inject constructor(
                 emit(Result.failure(e))
             }
         } else {
-            delay(800)
-            emit(Result.success(mockMatches()))
+            emit(Result.failure(IllegalArgumentException("Missing triage severity or recommendations. Cannot match hospitals.")))
         }
     }
 
