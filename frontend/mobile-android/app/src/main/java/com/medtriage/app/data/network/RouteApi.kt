@@ -23,7 +23,7 @@ data class RoutePointDto(
 )
 
 data class RouteResponseDto(
-    val distance_km: Double,
-    val duration_minutes: Int,
+    val distance_km: Double? = null,
+    val duration_minutes: Double? = null,
     val directions_url: String? = null
 )

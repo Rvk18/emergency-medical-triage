@@ -14,7 +14,10 @@ Emergency Medical Triage Android app (Kotlin, Jetpack Compose, Material 3). RMP/
 
 - **[MOBILE-COGNITO-API-AUTH.md](../../docs/frontend/MOBILE-COGNITO-API-AUTH.md)** – How to get User Pool ID / Client ID / API URL from Terraform, sign in with Cognito InitiateAuth, get the **Id Token** (not Access Token), and send **`Authorization: Bearer <IdToken>`** on all protected endpoints (triage, hospitals, route, rmp/learning). Includes public vs protected endpoints and token refresh.
 
-The app’s `CognitoApi.kt` calls InitiateAuth; use `AuthenticationResult.IdToken` for the API and attach it via an OkHttp/Retrofit interceptor.
+The app implements **end-to-end Cognito auth**: sign-in with email/password via InitiateAuth, store **Id Token** and **Refresh Token**, and send **`Authorization: Bearer <IdToken>`** on every request to /triage, /hospitals, /route (via `AuthInterceptor`). See `AuthRepository.kt` and `MOBILE-COGNITO-API-AUTH.md`.
+
+**Config:** Set `ApiConfig.COGNITO_CLIENT_ID` and `ApiConfig.BASE_URL` (and optionally `COGNITO_REGION`) to match your backend. From project root after `terraform apply`:  
+`terraform -chdir=infrastructure output -raw cognito_app_client_id` and `terraform -chdir=infrastructure output -raw api_gateway_url`.
 
 ## Requirements
 

@@ -22,6 +22,7 @@ class UserPreferences @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
     private val authTokenKey = stringPreferencesKey("auth_token")
+    private val refreshTokenKey = stringPreferencesKey("refresh_token")
     private val selectedLanguageKey = stringPreferencesKey("selected_language")
     private val userRoleKey = stringPreferencesKey("user_role")
     private val darkThemeKey = booleanPreferencesKey("dark_theme")
@@ -42,10 +43,21 @@ class UserPreferences @Inject constructor(
         .catch { _ -> emit(emptyPreferences()) }
         .map { prefs -> prefs[darkThemeKey] ?: false }
 
+    val refreshToken: Flow<String?> = context.dataStore.data
+        .catch { _ -> emit(emptyPreferences()) }
+        .map { prefs -> prefs[refreshTokenKey] }
+
     suspend fun setAuthToken(token: String?) {
         context.dataStore.edit { prefs ->
             if (token != null) prefs[authTokenKey] = token
             else prefs.remove(authTokenKey)
+        }
+    }
+
+    suspend fun setRefreshToken(token: String?) {
+        context.dataStore.edit { prefs ->
+            if (token != null) prefs[refreshTokenKey] = token
+            else prefs.remove(refreshTokenKey)
         }
     }
 
@@ -76,6 +88,7 @@ class UserPreferences @Inject constructor(
     suspend fun clearSession() {
         context.dataStore.edit { prefs ->
             prefs.remove(authTokenKey)
+            prefs.remove(refreshTokenKey)
             prefs.remove(userRoleKey)
         }
     }

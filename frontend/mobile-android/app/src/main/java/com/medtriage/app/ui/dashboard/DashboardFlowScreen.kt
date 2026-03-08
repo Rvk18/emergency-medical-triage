@@ -22,9 +22,7 @@ fun DashboardFlowScreen(
 
     Box(Modifier.fillMaxSize()) {
         when {
-            state.showLearning -> LearningScreen(
-                modules = state.modules,
-                loading = state.modulesLoading,
+            state.showLearning -> LearningFlowScreen(
                 onBack = { viewModel.hideLearning() }
             )
             else -> RmpDashboardScreen(

@@ -26,11 +26,13 @@ data class HospitalsResponseDto(
 )
 
 data class HospitalDto(
+    val hospital_id: String? = null,
     val name: String,
     val match_score: Double? = null,
     val match_reasons: List<String>? = null,
     val lat: Double? = null,
     val lon: Double? = null,
     val distance_km: Double? = null,
+    val duration_minutes: Double? = null,
     val address: String? = null
 )
