@@ -34,6 +34,12 @@ secrets.env
 agentcore/agent/.bedrock_agentcore.yaml
 agentcore/agent/.bedrock_agentcore/
 
+# Android / Gradle (mobile-android)
+frontend/mobile-android/.gradle/
+frontend/mobile-android/build/
+*.iml
+local.properties
+
 # Dependencies and Python
 node_modules/
 __pycache__/
