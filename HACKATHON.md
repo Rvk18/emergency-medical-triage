@@ -32,6 +32,7 @@ We **augment RMPs** (not replace them) with:
 | **POST /hospitals** | Severity + recommendations → list of hospitals (name, match_score, lat/lon). Optional patient location for distance. |
 | **POST /route** | Origin + destination (lat/lon or address) → `distance_km`, `duration_minutes`, `directions_url` (open in Google Maps). |
 | **RMP auth** | Cognito Id Token; all POST (except /health) require `Authorization: Bearer <IdToken>`. |
+| **RMP Learning** | POST /rmp/learning: get_question or score_answer → points + feedback. GET /rmp/learning/me, GET /rmp/learning/leaderboard. Backend complete; frontend: [RMP-LEARNING-API.md](docs/frontend/RMP-LEARNING-API.md). |
 | **Eka on triage** | AgentCore triage runtime + MCP Gateway + Eka Lambda: `search_medications`, `search_protocols`, `get_protocol_publishers`, `search_pharmacology`. Enabled via `python3 scripts/enable_eka_on_runtime.py`. |
 
 ---
@@ -117,16 +118,21 @@ See **docs/backend/TESTING-Gateway-Eka.md** §4b for full list. Examples:
 
 | Doc | Purpose |
 |-----|--------|
-| [README.md](README.md) | Project overview, structure, quick start |
-| [docs/README.md](docs/README.md) | Full documentation index (frontend, backend, infra) |
-| [docs/frontend/API-Integration-Guide.md](docs/frontend/API-Integration-Guide.md) | **Frontend:** Base URL, auth, triage → hospitals → route, error handling |
+| [README.md](README.md) | Project overview, structure, quick start, **Big 5**, doc links |
+| [PROJECT-SUMMARY.md](PROJECT-SUMMARY.md) | **Submission #5:** one-pager; fill in MVP/video/PPT links |
+| [SUBMISSION-CHECKLIST.md](SUBMISSION-CHECKLIST.md) | **Big 5** checklist, GitHub public, MVP runbook |
+| [docs/README.md](docs/README.md) | Full documentation index (frontend, backend, infra, roadmap) |
+| [docs/frontend/API-Integration-Guide.md](docs/frontend/API-Integration-Guide.md) | **Frontend:** Base URL, auth, triage → hospitals → route, RMP Learning |
 | [docs/frontend/triage-api-contract.md](docs/frontend/triage-api-contract.md) | **Frontend:** Triage request/response, session_id, Eka behavior |
+| [docs/frontend/RMP-LEARNING-API.md](docs/frontend/RMP-LEARNING-API.md) | RMP Learning endpoints and frontend instructions |
 | [docs/frontend/RMP-AUTH.md](docs/frontend/RMP-AUTH.md) | Cognito sign-in, Id Token for mobile/web |
 | [docs/backend/TESTING-Pipeline-curl.md](docs/backend/TESTING-Pipeline-curl.md) | Full pipeline curl (triage → hospitals → route) |
 | [docs/backend/TESTING-Gateway-Eka.md](docs/backend/TESTING-Gateway-Eka.md) | Eka triage test cases (medications, protocols, combined) |
 | [docs/backend/EKA-VALIDATION-RUNBOOK.md](docs/backend/EKA-VALIDATION-RUNBOOK.md) | Eka config, Lambda test, response shape |
+| [docs/backend/API-TEST-RESULTS.md](docs/backend/API-TEST-RESULTS.md) | One-curl-per-endpoint matrix, RMP Learning curls |
 | [docs/backend/agentcore-gateway-manual-steps.md](docs/backend/agentcore-gateway-manual-steps.md) | Gateway setup, Eka on triage runtime |
 | [docs/backend/secrets.md](docs/backend/secrets.md) | Terraform secrets, api_config, load scripts |
+| [docs/MVP-DEPLOY-RUNBOOK.md](docs/MVP-DEPLOY-RUNBOOK.md) | Deploy web on AWS; mobile APK/Drive for submission #3 |
 
 ---
 
@@ -134,18 +140,21 @@ See **docs/backend/TESTING-Gateway-Eka.md** §4b for full list. Examples:
 
 ```
 ├── README.md
-├── HACKATHON.md              ← This file (submission summary)
-├── src/                      # Lambda handlers (triage, hospital_matcher, route)
-├── agentcore/agent/          # AgentCore agents (triage, hospital_matcher, routing)
-├── infrastructure/           # Terraform (Lambda, API Gateway, Aurora, Eka secret)
-├── scripts/                  # load_api_config.py, get_rmp_token.py, setup_agentcore_gateway.py, enable_eka_on_runtime.py
+├── PROJECT-SUMMARY.md          # Submission #5 one-pager
+├── SUBMISSION-CHECKLIST.md     # Big 5 checklist
+├── HACKATHON.md                ← This file (evaluators: problem, solution, quick start, doc index)
+├── src/                        # Lambda handlers (triage, hospital_matcher, rmp_learning, route)
+├── agentcore/agent/            # AgentCore agents (triage, hospital_matcher, routing, rmp_quiz)
+├── infrastructure/             # Terraform (Lambda, API Gateway, Aurora, Gateway Lambdas)
+├── scripts/                    # load_api_config.py, get_rmp_token.py, setup_agentcore_gateway.py, enable_eka_on_runtime.py, run_rmp_learning_migration.py
 ├── docs/
-│   ├── frontend/             # API integration, triage contract, RMP auth
-│   ├── backend/              # Testing, Eka runbook, Gateway steps, TODO
-│   └── infrastructure/       # Bastion, Google Maps setup
+│   ├── frontend/               # API integration, triage contract, RMP auth, RMP Learning API
+│   ├── backend/                # Testing, Eka runbook, Gateway steps, TODO, API-TEST-RESULTS
+│   ├── infrastructure/         # Bastion, Google Maps
+│   └── MVP-DEPLOY-RUNBOOK.md   # Deploy web + mobile for submission #3
 └── frontend/
-    ├── web/                  # Web dashboard
-    └── mobile-android/       # Android app
+    ├── web/                    # Web dashboard
+    └── mobile-android/         # Android app
 ```
 
 ---

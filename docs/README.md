@@ -6,27 +6,19 @@ Central documentation for the Emergency Medical Triage project.
 
 ## Hackathon submission
 
-**Evaluators and judges:** Start with **[HACKATHON.md](../HACKATHON.md)** at the repo root. It contains:
+**Evaluators and judges:** Start with **[HACKATHON.md](../HACKATHON.md)** at the repo root. Also:
 
-- Problem and solution summary  
-- Features (triage with Eka, hospitals, route, RMP auth)  
-- Quick start (API URL, token, curl for triage → hospitals → route)  
-- Eka triage test cases (medications, protocols)  
-- Demo flow and full documentation index  
+- **[PROJECT-SUMMARY.md](../PROJECT-SUMMARY.md)** — One-pager for submission (#5); fill in MVP/video/PPT links.
+- **[SUBMISSION-CHECKLIST.md](../SUBMISSION-CHECKLIST.md)** — The Big 5 (PPT, video, MVP link, GitHub public, project summary).
 
 ---
 
 ## Roadmap (next phases)
 
-**See [ROADMAP-NEXT.md](ROADMAP-NEXT.md)** for the ordered plan:
+**See [ROADMAP-MODULES.md](ROADMAP-MODULES.md)** for modules A/B/C/D (what is what, plan ahead) and **[ROADMAP-NEXT.md](ROADMAP-NEXT.md)** for the ordered plan:
 
-1. **Redeploy AgentCore** ✅ Done – G3 prompts live (Hospital Matcher, Triage, Routing); enable_eka_on_runtime run after triage.
-2. **Policy** ✅ – AgentCore Policy GA; policy engine on Gateway via `scripts/setup_agentcore_policy.py`. All eight tools (get_hospitals, four Eka, get_route, get_directions, geocode_address) in allowlist. See [backend/POLICY-RUNBOOK.md](backend/POLICY-RUNBOOK.md) and [POLICY-RCA.md](backend/POLICY-RCA.md).
-3. **HIPAA H1–H4** – Document PHI, encryption, access, audit.
-4. **AC-3 re-test** – Session continuity (same session_id across triage → hospitals).
-5. **Deploy web app + frontend integration** – Deploy `frontend/web/`, wire API URL, Cognito, triage → hospitals → route, session_id.  
-
----
+- **RMP Learning (C)** — Backend complete; frontend team: [RMP-LEARNING-API.md](frontend/RMP-LEARNING-API.md).
+- **Next:** A (Offline) → B (Multi-language) → D (Collective intelligence). AC-3 covered by comprehensive curl tests. Web app deploy and E2E testing last.
 
 ## Frontend (mobile & web)
 
@@ -38,7 +30,9 @@ Central documentation for the Emergency Medical Triage project.
 | **[Route-API.md](frontend/Route-API.md)** | POST /route – origin/destination (lat/lon or address), distance_km, duration_minutes, directions_url (Google Maps). |
 | **[openapi.yaml](openapi.yaml)** | **Full Swagger/OpenAPI 3.0** – all endpoints, request/response schemas, Bearer auth. Use for codegen or Swagger UI. |
 | **[RMP-AUTH.md](frontend/RMP-AUTH.md)** | Cognito sign-in for RMPs; getting Id Token for Amplify / mobile / web. |
+| **[RMP-LEARNING-API.md](frontend/RMP-LEARNING-API.md)** | RMP Learning: get_question, score_answer, GET /me, GET /leaderboard; frontend instructions. |
 | [TESTING-Pipeline-curl.md](backend/TESTING-Pipeline-curl.md) | Curl examples for full pipeline (triage → hospitals → route); use with `get_rmp_token.py`. |
+| [MVP-DEPLOY-RUNBOOK.md](MVP-DEPLOY-RUNBOOK.md) | Deploy web on AWS; mobile APK/Drive/internal testing for submission #3. |
 
 ---
 
@@ -52,7 +46,7 @@ Central documentation for the Emergency Medical Triage project.
 | [TESTING-Pipeline-curl.md](backend/TESTING-Pipeline-curl.md) | Full pipeline curl (triage → hospitals → route), RMP token |
 | [TESTING-Gateway-Eka.md](backend/TESTING-Gateway-Eka.md) | Unit/integration tests, **Eka triage test cases** (M1–M6 medications, P1–P6 protocols, C1–C2 combined) |
 | [EKA-VALIDATION-RUNBOOK.md](backend/EKA-VALIDATION-RUNBOOK.md) | E1–E5: Eka config, direct Lambda test, response shape |
-| [API-TEST-RESULTS.md](backend/API-TEST-RESULTS.md) | One-curl-per-endpoint test matrix; health, triage, hospitals, route; **Eka tools** get_protocol_publishers and search_pharmacology (curl + direct Lambda). |
+| [API-TEST-RESULTS.md](backend/API-TEST-RESULTS.md) | One-curl-per-endpoint test matrix; health, triage, hospitals, route, **RMP Learning**; Eka tools. |
 | [DEPLOY.md](../DEPLOY.md) | Why post-Terraform scripts exist; deploy order (terraform → setup_agentcore_gateway → enable_gateway_on_* after agentcore deploy). |
 | [HIPAA-Compliance-Checklist.md](backend/HIPAA-Compliance-Checklist.md) | H1–H4: PHI scope, encryption, access control, audit logging |
 | [agentcore-gateway-manual-steps.md](backend/agentcore-gateway-manual-steps.md) | Gateway setup script, Eka on triage runtime (`enable_eka_on_runtime.py`) |
@@ -69,6 +63,15 @@ Central documentation for the Emergency Medical Triage project.
 |----------|-------------|
 | [bastion-setup.md](infrastructure/bastion-setup.md) | Bastion host for SSH tunnel to Aurora |
 | [GOOGLE-MAPS-ACCOUNT-SETUP.md](infrastructure/GOOGLE-MAPS-ACCOUNT-SETUP.md) | Google Maps API key for POST /route |
+
+---
+
+## Roadmap
+
+| Document | Description |
+|----------|-------------|
+| [ROADMAP-MODULES.md](ROADMAP-MODULES.md) | Modules A/B/C/D: what is what, plan ahead |
+| [ROADMAP-NEXT.md](ROADMAP-NEXT.md) | Phases: A→B→D next, web deploy + E2E last |
 
 ---
 
