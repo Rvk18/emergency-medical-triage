@@ -63,3 +63,23 @@ output "api_config_secret_name" {
   description = "Secrets Manager secret name for API config (api_gateway_url, gateway Lambda ARNs). Use this to read config without Terraform outputs."
   value       = aws_secretsmanager_secret.api_config.name
 }
+
+output "web_app_url" {
+  description = "Web app URL (CloudFront or custom domain). Use as Working MVP link. Build frontend/web and run: aws s3 sync frontend/web/dist s3://WEB_APP_BUCKET --delete"
+  value       = var.web_app_domain_name != "" ? "https://${var.web_app_domain_name}" : "https://${aws_cloudfront_distribution.web.domain_name}"
+}
+
+output "web_app_cloudfront_domain" {
+  description = "CloudFront distribution domain. Point your custom domain CNAME to this when using web_app_domain_name."
+  value       = aws_cloudfront_distribution.web.domain_name
+}
+
+output "web_app_cloudfront_distribution_id" {
+  description = "CloudFront distribution ID (for cache invalidation: aws cloudfront create-invalidation --distribution-id ID --paths '/*')"
+  value       = aws_cloudfront_distribution.web.id
+}
+
+output "web_app_bucket_name" {
+  description = "S3 bucket name for web app static files. Upload dist/ with: aws s3 sync dist/ s3://this-bucket --delete"
+  value       = aws_s3_bucket.web.id
+}

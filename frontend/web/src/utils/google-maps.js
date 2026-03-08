@@ -31,15 +31,13 @@ export async function loadGoogleMaps() {
     loadCallbacks.push({ resolve, reject });
     
     try {
-      // Try to get API key from environment variable first (for local dev)
-      let apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-      
-      // If not in env, fetch from backend
+      // Prefer key from backend (GET /config → Secrets Manager); fallback to .env for local override
+      let apiKey = await getGoogleMapsApiKey();
       if (!apiKey || apiKey === 'your_google_maps_api_key_here') {
-        console.log('[GoogleMaps] Fetching API key from backend');
-        apiKey = await getGoogleMapsApiKey();
+        apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || null;
+        if (apiKey) console.log('[GoogleMaps] Using API key from .env');
       } else {
-        console.log('[GoogleMaps] Using API key from environment variable');
+        console.log('[GoogleMaps] Using API key from backend (GET /config)');
       }
       
       if (!apiKey) {

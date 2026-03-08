@@ -111,8 +111,14 @@ def _handle_get_leaderboard(event: dict) -> dict:
 
 
 def _response(status_code: int, body: dict) -> dict:
+    headers = {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Headers": "Content-Type,X-Amz-Date,Authorization",
+        "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+    }
     return {
         "statusCode": status_code,
-        "headers": {"Content-Type": "application/json"},
+        "headers": headers,
         "body": json.dumps(body),
     }

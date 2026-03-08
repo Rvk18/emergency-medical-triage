@@ -3,8 +3,23 @@
  * Handles all API calls to the backend
  */
 
+import { getIdToken } from '../utils/auth.js';
+
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://vrxlwtzfff.execute-api.us-east-1.amazonaws.com/dev';
 const USE_MOCK = import.meta.env.VITE_USE_MOCK_API === 'true' || false;
+
+/**
+ * Build headers for API requests (includes Cognito Id Token when logged in)
+ * @returns {Record<string, string>}
+ */
+function getAuthHeaders() {
+  const headers = { 'Content-Type': 'application/json' };
+  const token = getIdToken();
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+}
 
 /**
  * Mock triage response
@@ -90,9 +105,7 @@ export async function performTriage(data) {
   try {
     const response = await fetch(`${API_BASE_URL}/triage`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: getAuthHeaders(),
       body: JSON.stringify(data),
     });
     
@@ -212,9 +225,7 @@ export async function matchHospitals(data) {
   try {
     const response = await fetch(`${API_BASE_URL}/hospitals`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: getAuthHeaders(),
       body: JSON.stringify(data),
     });
     
@@ -264,6 +275,68 @@ export async function matchHospitals(data) {
  */
 export async function getHospitalRecommendations(data) {
   return matchHospitals(data);
+}
+
+/**
+ * Mock route response
+ */
+function getMockRouteResponse(data) {
+  return {
+    distance_km: 5.2,
+    duration_minutes: 14,
+    directions_url: 'https://www.google.com/maps/dir/?api=1',
+    session_id: data.session_id
+  };
+}
+
+/**
+ * Get driving directions (POST /route)
+ * @param {Object} data - { origin: { lat, lon } | { address }, destination: { lat, lon } | { address }, session_id?: string }
+ * @returns {Promise<Object>} { distance_km, duration_minutes, directions_url }
+ */
+export async function getRoute(data) {
+  console.log('[API] POST /route', data);
+
+  if (USE_MOCK) {
+    console.log('[API] Using mock API for route');
+    await new Promise(resolve => setTimeout(resolve, 800));
+    return getMockRouteResponse(data);
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/route`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+
+    console.log('[API] Route response status:', response.status);
+
+    if (!response.ok) {
+      const text = await response.text();
+      let errorMessage = `HTTP ${response.status}`;
+      try {
+        const error = JSON.parse(text);
+        errorMessage = error.message || error.error || errorMessage;
+      } catch (_) {
+        errorMessage = text || errorMessage;
+      }
+      console.warn('[API] Real route API failed, falling back to mock');
+      await new Promise(resolve => setTimeout(resolve, 300));
+      return getMockRouteResponse(data);
+    }
+
+    const result = await response.json();
+    if (result.directions_url === undefined && result.distance_km === undefined) {
+      throw new Error('Invalid route response');
+    }
+    return result;
+  } catch (error) {
+    console.error('[API] Route failed:', error);
+    console.warn('[API] Falling back to mock');
+    await new Promise(resolve => setTimeout(resolve, 300));
+    return getMockRouteResponse(data);
+  }
 }
 
 /**

@@ -155,3 +155,16 @@ variable "rmp_test_password" {
   default     = ""
   sensitive   = true
 }
+
+# Web app custom domain (optional). Leave empty to use default CloudFront URL only.
+variable "web_app_domain_name" {
+  description = "Custom domain for the web app (e.g. app.example.com). Requires web_app_acm_certificate_arn. Add CNAME pointing to CloudFront distribution domain."
+  type        = string
+  default     = ""
+}
+
+variable "web_app_acm_certificate_arn" {
+  description = "ACM certificate ARN for web_app_domain_name. Must be in us-east-1 for CloudFront."
+  type        = string
+  default     = ""
+}

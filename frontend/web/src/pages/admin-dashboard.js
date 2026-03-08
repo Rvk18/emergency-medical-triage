@@ -179,8 +179,8 @@ async function initMap() {
       <div style="height: 100%; display: flex; align-items: center; justify-content: center; background-color: #F3F4F6;">
         <div style="text-align: center; color: #6B7280;">
           <p style="font-size: 18px; margin-bottom: 8px;">📍 Map Unavailable</p>
-          <p style="font-size: 14px;">Google Maps API key not configured</p>
-          <p style="font-size: 12px; margin-top: 8px;">Add VITE_GOOGLE_MAPS_API_KEY to .env file</p>
+          <p style="font-size: 14px;">Google Maps API key not available.</p>
+          <p style="font-size: 12px; margin-top: 8px;">The key is loaded from the backend (GET /config). Ensure <code>google_maps_api_key</code> is set in Terraform and the secret exists. For local dev you can set <code>VITE_GOOGLE_MAPS_API_KEY</code> in .env.</p>
         </div>
       </div>
     `;

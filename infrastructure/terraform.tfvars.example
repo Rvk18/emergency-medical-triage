@@ -17,6 +17,11 @@ db_password = "CHANGE_ME_STRONG_PASSWORD"
 # Google Maps (optional – real directions for POST /route; leave empty for stub)
 # google_maps_api_key   = "AIza..."
 
+# Web app custom domain (optional). Leave empty to use default CloudFront URL (e.g. https://xxx.cloudfront.net).
+# Certificate must be in us-east-1. After apply, add a CNAME record: web_app_domain_name -> web_app_cloudfront_domain output.
+# web_app_domain_name         = "app.example.com"
+# web_app_acm_certificate_arn = "arn:aws:acm:us-east-1:ACCOUNT:certificate/xxx"
+
 # Eka Care (optional – Indian drugs, treatment protocols via Gateway). Requires Client ID + Client Secret; Lambda uses login API to get access token.
 # Get both from https://console.eka.care . See https://developer.eka.care/user-guides/get-started
 # eka_api_key        = "your-client-id"

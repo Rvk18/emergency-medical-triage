@@ -8,6 +8,14 @@ Emergency Medical Triage Android app (Kotlin, Jetpack Compose, Material 3). RMP/
 - **Do not edit:** `../web/` (web app), `../../src/` (backend), `../../infrastructure/`, or voice interface.
 - **Design reference:** See `../../docs/frontend/mobile-mock-design-checklist.md` and `../../docs/frontend/android-mobile-plan.md`.
 
+## Auth and API (Cognito + backend)
+
+**Use Cognito for sign-in and send the Id Token on every protected API request.** See:
+
+- **[MOBILE-COGNITO-API-AUTH.md](../../docs/frontend/MOBILE-COGNITO-API-AUTH.md)** – How to get User Pool ID / Client ID / API URL from Terraform, sign in with Cognito InitiateAuth, get the **Id Token** (not Access Token), and send **`Authorization: Bearer <IdToken>`** on all protected endpoints (triage, hospitals, route, rmp/learning). Includes public vs protected endpoints and token refresh.
+
+The app’s `CognitoApi.kt` calls InitiateAuth; use `AuthenticationResult.IdToken` for the API and attach it via an OkHttp/Retrofit interceptor.
+
 ## Requirements
 
 - Android Studio Ladybug (2024.2.1) or later, or CLI: JDK 17+, Android SDK 34.

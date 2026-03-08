@@ -2,6 +2,8 @@
 
 How to get a **Working MVP link** for the hackathon: deploy the web app on AWS (public) and options for making the mobile app available to evaluators.
 
+**Chosen approach:** Web app is hosted via **Terraform S3 + CloudFront** (`infrastructure/web_hosting.tf`). After `terraform apply`, build the frontend and upload: `aws s3 sync frontend/web/dist s3://$(terraform -chdir=infrastructure output -raw web_app_bucket_name) --delete`. Web URL: `terraform -chdir=infrastructure output -raw web_app_url`. Android: provide APK (e.g. Google Drive link) as well. See [WEB-BACKEND-INTEGRATION-PLAN.md](WEB-BACKEND-INTEGRATION-PLAN.md) and [SECURITY-PUBLIC-VS-PRIVATE.md](SECURITY-PUBLIC-VS-PRIVATE.md).
+
 ---
 
 ## 1. Web app — deploy on AWS and make public
@@ -16,13 +18,13 @@ How to get a **Working MVP link** for the hackathon: deploy the web app on AWS (
 4. **Deploy:** Amplify builds and deploys. You get a URL like `https://main.xxxx.amplifyapp.com`. Use that as your **Working MVP link**.
 5. **CORS:** Ensure your API Gateway allows the Amplify origin. If you get CORS errors, add the Amplify URL to the API’s CORS allowed origins (Terraform or API Gateway console).
 
-### Option B: S3 + CloudFront
+### Option B: S3 + CloudFront (Terraform — chosen)
 
-1. **Build:** From `frontend/web`: `npm run build` → static output in `dist/` or `out/`.
-2. **S3 bucket:** Create a bucket, enable static website hosting, upload the build output. Or use `aws s3 sync dist/ s3://your-bucket-name --delete`.
-3. **CloudFront:** Create a distribution with origin = S3 bucket (or S3 website endpoint). Use the CloudFront URL (e.g. `https://d1234.cloudfront.net`) as your **Working MVP link**.
-4. **Env:** Build with the correct API URL (e.g. at build time via env var) so the deployed app points to your live API.
-5. **CORS:** Same as Option A — allow the CloudFront (or custom) origin in API Gateway.
+1. **Terraform:** `infrastructure/web_hosting.tf` creates the web bucket and CloudFront. Run `terraform apply`; get bucket name and URL: `terraform -chdir=infrastructure output web_app_bucket_name web_app_url`.
+2. **Build:** From `frontend/web`: set `VITE_API_URL`, `VITE_COGNITO_*` (and optional `VITE_GOOGLE_MAPS_API_KEY`), then `npm run build` → `dist/`.
+3. **Upload:** `aws s3 sync dist/ s3://$(terraform -chdir=infrastructure output -raw web_app_bucket_name) --delete`.
+4. **Optional:** Invalidate cache: `aws cloudfront create-invalidation --distribution-id <ID> --paths "/*"`. Use `web_app_url` as your **Working MVP link**.
+5. **CORS:** API Gateway allows all origins (`*`); see `infrastructure/api_gateway_cors.tf`.
 
 ### Option C: Vercel / Netlify
 
@@ -61,8 +63,8 @@ If you can’t distribute the APK in time: in PROJECT-SUMMARY and PPT, write: �
 
 ## 3. What to put in the submission form
 
-- **Working MVP link:** Prefer the **web app URL** (Amplify/CloudFront/Vercel). It’s the one click that works for everyone.  
-- **Optional second link / note:** “Android APK: [Drive link]” or “Mobile: see PROJECT-SUMMARY.md for APK / build instructions.”
+- **Working MVP link:** Prefer the **web app URL** (CloudFront from Terraform, or Amplify/Vercel). It’s the one click that works for everyone.
+- **Android:** Provide **Android APK** link (e.g. Google Drive: “Anyone with the link can download”) in PROJECT-SUMMARY and submission: “Android APK (download): [Drive link].”
 
 ---
 
@@ -74,4 +76,6 @@ If you can’t distribute the APK in time: in PROJECT-SUMMARY and PPT, write: �
 | Web app code | `frontend/web/` |
 | Android app code | `frontend/mobile-android/` |
 | Frontend integration | [docs/frontend/API-Integration-Guide.md](frontend/API-Integration-Guide.md) |
-| CORS (API Gateway) | Infrastructure Terraform or API Gateway console — add your web app origin to allowed origins |
+| Web app URL (after deploy) | `terraform -chdir=infrastructure output -raw web_app_url` |
+| Web app bucket | `terraform -chdir=infrastructure output -raw web_app_bucket_name` |
+| CORS (API Gateway) | Allow all origins (`*`); see `infrastructure/api_gateway_cors.tf` and [SECURITY-PUBLIC-VS-PRIVATE.md](SECURITY-PUBLIC-VS-PRIVATE.md) |

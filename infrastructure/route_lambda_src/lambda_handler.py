@@ -233,4 +233,10 @@ def handler(event: dict, context: object) -> dict:
 
 
 def _response(status_code: int, body: dict) -> dict:
-    return {"statusCode": status_code, "headers": {"Content-Type": "application/json"}, "body": json.dumps(body)}
+    headers = {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Headers": "Content-Type,X-Amz-Date,Authorization",
+        "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+    }
+    return {"statusCode": status_code, "headers": headers, "body": json.dumps(body)}
