@@ -21,3 +21,6 @@ db_password = "CHANGE_ME_STRONG_PASSWORD"
 # Get both from https://console.eka.care . See https://developer.eka.care/user-guides/get-started
 # eka_api_key        = "your-client-id"
 # eka_client_secret  = "your-client-secret"
+
+# RMP Learning (Group C – Eka quiz). Set after: cd agentcore/agent && agentcore deploy --agent rmp_quiz_agent
+# rmp_quiz_agent_runtime_arn = "arn:aws:bedrock-agentcore:us-east-1:ACCOUNT:runtime/rmp_quiz_agent-xxx"

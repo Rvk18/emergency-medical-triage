@@ -13,6 +13,7 @@
 - **AC-2 (Triage on AgentCore):** Done. Triage agent in `agentcore/agent/triage_agent.py`; POST /triage invokes AgentCore; observability in [OBSERVABILITY.md](./OBSERVABILITY.md).
 - **AC-3 (Memory + Hospital MCP):** Implemented and tested. Optional `session_id` / `patient_id` on /triage and /hospitals; passed to AgentCore as `runtimeSessionId`. Hospital Matcher uses Gateway get_hospitals. Optional: re-test session continuity (same session_id across triage → hospitals → route).
 - **AC-4 (Routing + Identity):** Routing pipeline and RMP auth done. **Guardrails G1–G3 done:** input validation (triage: symptoms/vitals/age; hospitals: severity enum, limit, lat/lon; route: body, lat/lon, address length), output validation (triage/hospitals/route max lengths and enums), safety prompts (AGENT-PROMPTS.md, prompts updated in instructions and agents). **Policy done:** run `scripts/setup_agentcore_policy.py` after gateway setup. See [AC4-Routing-Identity-Design.md](./AC4-Routing-Identity-Design.md) §4, [AGENT-PROMPTS.md](./AGENT-PROMPTS.md), [POLICY-RUNBOOK.md](./POLICY-RUNBOOK.md).
+- **RMP Learning (Group C first slice):** Done. Eka quiz (get_question + score_answer) + POST /rmp/learning; AgentCore RMP Quiz runtime deployed; Gateway (Eka) enabled on quiz runtime; Lambda + API created via Terraform. Tested: get_question and score_answer return 200. See [NEW-MODULE-RMP-AUGMENTATION.md](./NEW-MODULE-RMP-AUGMENTATION.md) §6, [API-TEST-RESULTS.md](./API-TEST-RESULTS.md) § RMP Learning, [RMP-LEARNING-COMPLETE-RUNBOOK.md](./RMP-LEARNING-COMPLETE-RUNBOOK.md).
 - **Hackathon submission:** Docs updated. [HACKATHON.md](../../HACKATHON.md), [API-Integration-Guide.md](../frontend/API-Integration-Guide.md), [triage-api-contract.md](../frontend/triage-api-contract.md).
 
 ---
@@ -23,7 +24,14 @@
 
 **Completed: Guardrails G1–G3** — G1 input validation (triage/hospitals/route), G2 output validation (max lengths, enums, route sanitize), G3 safety prompts ([AGENT-PROMPTS.md](./AGENT-PROMPTS.md), prompts updated in instructions and agents).
 
-**Next (in order):** 1) ~~Redeploy AgentCore~~ ✅ Done; 2) Policy ✅ Implemented ([POLICY-RUNBOOK.md](./POLICY-RUNBOOK.md), `scripts/setup_agentcore_policy.py`); 3) HIPAA H1–H4 ✅ Complete ([HIPAA-Compliance-Checklist.md](./HIPAA-Compliance-Checklist.md)); 4) Comprehensive endpoint testing ([API-TEST-RESULTS.md](./API-TEST-RESULTS.md)); 5) Deploy web app + frontend–backend integration. Full roadmap: [ROADMAP-NEXT.md](../ROADMAP-NEXT.md).
+**Next (in order):**
+
+1. **New module — C first slice done.** RMP learning: Eka quiz + AgentCore scoring + POST /rmp/learning deployed and tested. **Next:** Aurora rmp_scores/learning_answers, GET leaderboard, GET me, frontend Learning screen; then continue with Group A (Offline) → B (Multi-language) → D (Collective intelligence). See [NEW-MODULE-RMP-AUGMENTATION.md](./NEW-MODULE-RMP-AUGMENTATION.md) §4–6.
+2. **AC-3 re-test** — Same session_id across triage → hospitals → route; verify with curl or frontend. [TESTING-Pipeline-curl.md](./TESTING-Pipeline-curl.md).
+3. **Web app deploy + frontend–backend integration** — Deploy `frontend/web/`, API URL, Cognito, triage → hospitals → route, session_id. [ROADMAP-NEXT.md](../ROADMAP-NEXT.md) § Phase 5.
+4. **Comprehensive E2E testing** — End-to-end testing from **frontend web app** and **mobile app**; confirm full flow (triage → hospitals → route, auth, session_id). Document results and fix issues.
+
+Full roadmap: [ROADMAP-NEXT.md](../ROADMAP-NEXT.md).
 
 | # | Item | What to do |
 |---|------|------------|

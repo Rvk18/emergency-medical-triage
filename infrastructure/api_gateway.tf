@@ -37,6 +37,18 @@ resource "aws_api_gateway_resource" "route" {
   path_part   = "route"
 }
 
+resource "aws_api_gateway_resource" "rmp" {
+  rest_api_id = aws_api_gateway_rest_api.main.id
+  parent_id   = aws_api_gateway_rest_api.main.root_resource_id
+  path_part   = "rmp"
+}
+
+resource "aws_api_gateway_resource" "rmp_learning" {
+  rest_api_id = aws_api_gateway_rest_api.main.id
+  parent_id   = aws_api_gateway_resource.rmp.id
+  path_part   = "learning"
+}
+
 # RMP auth: Cognito User Pool authorizer for /triage, /hospitals, /route
 resource "aws_api_gateway_authorizer" "rmp" {
   name            = "rmp-cognito"
@@ -120,6 +132,28 @@ resource "aws_api_gateway_integration" "route_post" {
   uri                     = aws_lambda_function.route.invoke_arn
 }
 
+# POST /rmp/learning (RMP auth) - Eka quiz get_question / score_answer
+resource "aws_api_gateway_method" "rmp_learning_post" {
+  count = var.rmp_quiz_agent_runtime_arn != "" ? 1 : 0
+
+  rest_api_id   = aws_api_gateway_rest_api.main.id
+  resource_id   = aws_api_gateway_resource.rmp_learning.id
+  http_method   = "POST"
+  authorization = "COGNITO_USER_POOLS"
+  authorizer_id = aws_api_gateway_authorizer.rmp.id
+}
+
+resource "aws_api_gateway_integration" "rmp_learning_post" {
+  count = var.rmp_quiz_agent_runtime_arn != "" ? 1 : 0
+
+  rest_api_id             = aws_api_gateway_rest_api.main.id
+  resource_id             = aws_api_gateway_resource.rmp_learning.id
+  http_method             = aws_api_gateway_method.rmp_learning_post[0].http_method
+  type                    = "AWS_PROXY"
+  integration_http_method = "POST"
+  uri                     = aws_lambda_function.rmp_learning[0].invoke_arn
+}
+
 # AWS_PROXY passes response through from Lambda; no method/integration response needed
 
 resource "aws_api_gateway_deployment" "main" {
@@ -131,6 +165,8 @@ resource "aws_api_gateway_deployment" "main" {
       aws_api_gateway_resource.health.id,
       aws_api_gateway_resource.hospitals.id,
       aws_api_gateway_resource.route.id,
+      aws_api_gateway_resource.rmp.id,
+      aws_api_gateway_resource.rmp_learning.id,
       aws_api_gateway_method.health_get.id,
       aws_api_gateway_integration.health_mock.id,
       aws_api_gateway_method.triage_post.id,
@@ -140,6 +176,8 @@ resource "aws_api_gateway_deployment" "main" {
       aws_api_gateway_method.route_post.id,
       aws_api_gateway_integration.route_post.id,
       aws_api_gateway_authorizer.rmp.id,
+      length(aws_lambda_function.rmp_learning) > 0 ? aws_api_gateway_method.rmp_learning_post[0].id : "",
+      length(aws_lambda_function.rmp_learning) > 0 ? aws_api_gateway_integration.rmp_learning_post[0].id : "",
     ]))
   }
 

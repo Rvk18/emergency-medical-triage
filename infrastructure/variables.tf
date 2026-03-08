@@ -111,6 +111,13 @@ variable "routing_agent_runtime_arn" {
   default     = ""
 }
 
+# RMP Learning (Eka quiz + gamification) - Group C
+variable "rmp_quiz_agent_runtime_arn" {
+  description = "AgentCore Runtime ARN for RMP Quiz agent (from agentcore deploy --agent rmp_quiz_agent). Required for POST /rmp/learning."
+  type        = string
+  default     = ""
+}
+
 # Eka Care API (for Eka MCP - Indian drugs, treatment protocols)
 variable "eka_api_key" {
   description = "Eka Care Client ID (from console.eka.care). Use with eka_client_secret for login; stored in Secrets Manager."

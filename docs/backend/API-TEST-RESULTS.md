@@ -26,7 +26,11 @@ curl -s -w "\nHTTP:%{http_code}" -X POST "${BASE}/route" -H "Content-Type: appli
 aws lambda invoke --function-name "$GATEWAY_EKA_LAMBDA_ARN" --payload '{"tool":"get_protocol_publishers"}' eka_out.json; cat eka_out.json | head -3
 # 7. Eka search_pharmacology (direct Lambda – new Gateway tool)
 aws lambda invoke --function-name "$GATEWAY_EKA_LAMBDA_ARN" --payload '{"tool":"search_pharmacology","query":"Paracetamol"}' eka_out.json; cat eka_out.json | head -5
+# 8. POST /rmp/learning (when rmp_quiz_agent_runtime_arn is set)
+# curl -s -w "\nHTTP:%{http_code}" -X POST "${BASE}/rmp/learning" -H "Content-Type: application/json" -H "Authorization: Bearer $RMP_TOKEN" -d '{"action":"get_question","topic":"fever protocol"}'
 ```
+
+**Note:** Tests 2 (Triage) and 4 (Hospitals with location) can return **504** on first request (cold start / 29s limit). Retry once; they typically return **200** on second try.
 
 Optional: run **Eka MCP tests** (see table in § Eka MCP tests) to confirm Indian medications and protocols. Once all rows in the Status table are ✅, proceed to the next phase (e.g. deploy web app + frontend integration).
 
@@ -65,6 +69,17 @@ BASE="${API_URL%/}"
 | **POST /route** | Route Lambda → maps-target (get_directions) | 200, `distance_km`, `duration_minutes`, `directions_url` | 200 | ✅ Yes |
 | **Eka get_protocol_publishers** | Direct Lambda invoke (Gateway tool) | 200, JSON with `publishers` | 200, publishers list (ICMR, RSSDI, etc.) | ✅ Yes |
 | **Eka search_pharmacology** | Direct Lambda invoke (Gateway tool) | 200, JSON with pharmacology results | 200, Paracetamol dose/indications | ✅ Yes |
+| **POST /rmp/learning** | RMP Quiz AgentCore + Eka (get_question / score_answer) | 200, `question`+`reference_answer` or `points`+`feedback` | 200 get_question + score_answer (first request may 504; retry) | ✅ Yes |
+
+## RMP Learning (Group C) test — POST /rmp/learning
+
+**Code and infra:** Implemented (agent `rmp_quiz_agent`, Lambda, POST /rmp/learning when `rmp_quiz_agent_runtime_arn` is set). See [NEW-MODULE-RMP-AUGMENTATION.md](./NEW-MODULE-RMP-AUGMENTATION.md) §6.
+
+**Deploy fix:** For the first deploy, set `agent_id: null` (and `agent_arn: null`) for `rmp_quiz_agent` in `.bedrock_agentcore.yaml` so the toolkit calls **CreateAgentRuntime** instead of UpdateAgentRuntime (which was denied for a non-existent runtime). After a successful deploy, the toolkit writes the new runtime ID/ARN back to the yaml.
+
+**Test run:** POST /rmp/learning returns **200** for both `get_question` and `score_answer`. First request may **504** (cold start / API Gateway 29s limit); retry once. Example:
+- Get question: `curl -s -X POST "$API_URL/rmp/learning" -H "Content-Type: application/json" -H "Authorization: Bearer $RMP_TOKEN" -d '{"action":"get_question","topic":"fever protocol"}'`
+- Score answer: same URL with body `{"action":"score_answer","question":"...","reference_answer":"...","user_answer":"..."}` (use `question` and `reference_answer` from get_question response).
 
 ## Test 4 RCA (POST /hospitals with location → 504)
 

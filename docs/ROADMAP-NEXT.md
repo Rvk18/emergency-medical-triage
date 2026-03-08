@@ -1,6 +1,21 @@
 # Roadmap: Next phases
 
-Order of work: **1 → 2 → 3 → 4**, then **5 (web app deploy + frontend integration)**.
+Order of work: **New module** (C → A → B → D) → **AC-3 re-test** → **Web app deploy + integration** → **Comprehensive E2E testing (web + mobile)**.
+
+---
+
+## New module (first — C then A → B → D)
+
+**Goal:** Implement the five untouched capability areas. We **start with Group C (RMP learning)** — Eka quiz + AgentCore scoring + gamification + leaderboard — then A → B → D. Full scope: [NEW-MODULE-RMP-AUGMENTATION.md](backend/NEW-MODULE-RMP-AUGMENTATION.md).
+
+| Order | Group | What |
+|-------|--------|------|
+| **1** | **C. RMP learning** | Eka MCP → questions; AgentCore scores answer → points; leaderboard; peer-to-peer later |
+| 2 | **A. Offline & resilience** | Offline triage + cached hospitals/routing; sync APIs (`/sync/upload`, `/sync/download`) |
+| 3 | **B. Multi-language & accessibility** | Language + audio (e.g. TTS) for illiterate users |
+| 4 | **D. Collective intelligence** | Outcome aggregation; system improves from every case |
+
+Start with **Group C** (Eka quiz + gamification); then A → B → D. When done (or incrementally), proceed to AC-3 re-test.
 
 ---
 
@@ -94,12 +109,27 @@ See [TESTING-Pipeline-curl.md](backend/TESTING-Pipeline-curl.md).
 
 ---
 
+## Phase 6: Comprehensive E2E testing (web + mobile)
+
+**Goal:** Confirm the full flow works end-to-end from both the **web app** and **mobile app**.
+
+**Steps:**
+
+1. From **frontend web app:** Sign in (Cognito), run triage → hospitals → route with one session_id; verify responses, directions_url, and any errors.
+2. From **mobile app:** Same flow; verify API URL, auth, and triage → hospitals → route.
+3. Document results (pass/fail per client and endpoint); fix any issues.
+4. Treat as done when both web and mobile complete the flow successfully against the live backend.
+
+---
+
 ## Summary
 
 | Phase | What | Done when |
 |-------|------|-----------|
+| **New module** | **C first slice done:** Eka quiz + AgentCore scoring + POST /rmp/learning; then A → B → D. See [NEW-MODULE-RMP-AUGMENTATION.md](backend/NEW-MODULE-RMP-AUGMENTATION.md). | C first slice shipped; DB + leaderboard next; then A, B, D. |
 | 1 | Redeploy AgentCore (all 3 runtimes + enable_eka_on_runtime) | ✅ G3 prompts live; Eka still on triage. |
 | 2 | Policy (GA) | ✅ Policy engine on Gateway via `scripts/setup_agentcore_policy.py`; see [POLICY-RUNBOOK.md](backend/POLICY-RUNBOOK.md). |
-| 3 | HIPAA H1–H4 | PHI scope, encryption, access, audit documented. See [HIPAA-Compliance-Checklist.md](backend/HIPAA-Compliance-Checklist.md). |
+| 3 | HIPAA H1–H4 | ✅ PHI scope, encryption, access, audit documented. See [HIPAA-Compliance-Checklist.md](backend/HIPAA-Compliance-Checklist.md). |
 | 4 | AC-3 re-test | session_id continuity verified with curl or frontend. |
 | 5 | Web app deploy + frontend integration | App deployed; uses API_URL, Cognito, triage → hospitals → route; session_id sent. |
+| 6 | Comprehensive E2E testing (web + mobile) | Web and mobile both complete full flow successfully; results documented.
