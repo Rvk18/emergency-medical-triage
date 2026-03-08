@@ -55,6 +55,7 @@ fun AppShell(
     isOffline: Boolean = false,
     lastSyncTime: String? = null,
     syncStatus: SyncStatus = SyncStatus.Synced,
+    selectedLangCode: String = "en",
     roleBadge: String = "Healthcare Worker",
     userRole: String = "healthcare_worker",
     onLogout: () -> Unit = {},
@@ -147,6 +148,7 @@ fun AppShell(
         ) {
             composable(NavRoutes.Triage) {
                 TriageFlowScreen(
+                    selectedLangCode = selectedLangCode,
                     onProceedToHospitalMatching = {
                         navController.navigate(NavRoutes.Hospitals) {
                             popUpTo(navController.graph.startDestinationId) { saveState = true }
@@ -158,13 +160,14 @@ fun AppShell(
             }
             composable(NavRoutes.Hospitals) {
                 if (userRole == "patient") {
-                    NearbyHospitalsScreen()
+                    NearbyHospitalsScreen(selectedLangCode = selectedLangCode)
                 } else {
-                    HospitalsFlowScreen()
+                    HospitalsFlowScreen(selectedLangCode = selectedLangCode)
                 }
             }
             composable(NavRoutes.Dashboard) {
                 DashboardFlowScreen(
+                    selectedLangCode = selectedLangCode,
                     onNavigateToTriage = {
                         navController.navigate(NavRoutes.Triage) {
                             popUpTo(navController.graph.startDestinationId) { saveState = true }
@@ -181,6 +184,7 @@ fun AppShell(
             }
             composable(NavRoutes.PatientDashboard) {
                 PatientDashboardScreen(
+                    selectedLangCode = selectedLangCode,
                     onRequestEmergency = {
                         navController.navigate(NavRoutes.PatientEmergency) {
                             launchSingleTop = true
@@ -199,6 +203,7 @@ fun AppShell(
             }
             composable(NavRoutes.More) {
                 MoreScreen(
+                    selectedLangCode = selectedLangCode,
                     onLanguage = { /* TODO: open language selector */ },
                     onLogout = onLogout
                 )

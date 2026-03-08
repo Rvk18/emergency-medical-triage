@@ -4,12 +4,14 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -42,6 +44,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import com.medtriage.app.ui.utils.Translator
 import com.medtriage.app.ui.theme.MedTriagePrimary
 import com.medtriage.app.ui.theme.Spacing
 
@@ -63,6 +66,7 @@ private val LOGIN_LANGUAGES = listOf(
 @Composable
 fun LoginScreen(
     darkTheme: Boolean = false,
+    selectedLangCode: String = "en",
     onDarkThemeChange: (Boolean) -> Unit = {},
     onLoginSuccess: () -> Unit,
     onLogin: (emailOrPhone: String, password: String, onResult: (Result<Unit>) -> Unit) -> Unit,
@@ -87,6 +91,7 @@ fun LoginScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .statusBarsPadding()
                 .verticalScroll(rememberScrollState())
         ) {
             // Top bar: Back + title area + Settings
@@ -99,25 +104,29 @@ fun LoginScreen(
                 IconButton(onClick = onBackToRoleSelection) {
                     Icon(
                         Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back",
+                        contentDescription = Translator.t("Back", selectedLangCode),
                         tint = onBackgroundColor
                     )
                 }
                 TextButton(onClick = onBackToRoleSelection) {
-                    Text("Change role", color = onBackgroundColor.copy(alpha = 0.9f))
+                    Text(Translator.t("Change role", selectedLangCode), color = onBackgroundColor.copy(alpha = 0.9f))
                 }
                 Spacer(modifier = Modifier.weight(1f))
                 Text(
-                    "MedTriage AI",
+                    Translator.t("MedTriage AI", selectedLangCode),
                     style = MaterialTheme.typography.titleMedium,
                     color = onBackgroundColor
                 )
                 Spacer(modifier = Modifier.weight(1f))
-                IconButton(onClick = { onDarkThemeChange(!darkTheme) }) {
+                IconButton(
+                    onClick = { onDarkThemeChange(!darkTheme) },
+                    modifier = Modifier.padding(8.dp)
+                ) {
                     Icon(
-                        if (darkTheme) Icons.Default.LightMode else Icons.Default.DarkMode,
-                        contentDescription = if (darkTheme) "Switch to light theme" else "Switch to dark theme",
-                        tint = onBackgroundColor
+                        imageVector = if (darkTheme) Icons.Default.LightMode else Icons.Default.DarkMode,
+                        contentDescription = if (darkTheme) Translator.t("Switch to light theme", selectedLangCode) else Translator.t("Switch to dark theme", selectedLangCode),
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(28.dp)
                     )
                 }
                 IconButton(onClick = onSettingsClick) {
@@ -138,12 +147,12 @@ fun LoginScreen(
             ) {
                 Column(modifier = Modifier.padding(Spacing.cardPadding)) {
                     Text(
-                        text = "MedTriage AI",
+                        text = Translator.t("MedTriage AI", selectedLangCode),
                         style = MaterialTheme.typography.headlineMedium,
                         color = onSurfaceColor
                     )
                     Text(
-                        text = "Emergency Medical Triage System",
+                        text = Translator.t("Emergency Medical Triage System", selectedLangCode),
                         style = MaterialTheme.typography.bodyMedium,
                         color = onSurfaceColor.copy(alpha = 0.8f),
                         modifier = Modifier.padding(top = 4.dp)
@@ -156,7 +165,7 @@ fun LoginScreen(
                     OutlinedTextField(
                         value = emailOrPhone,
                         onValueChange = { emailOrPhone = it; error = null },
-                        label = { Text("Email or Phone", color = onSurfaceColor.copy(alpha = 0.8f)) },
+                        label = { Text(Translator.t("Email or Phone", selectedLangCode), color = onSurfaceColor.copy(alpha = 0.8f)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
@@ -174,7 +183,7 @@ fun LoginScreen(
                     OutlinedTextField(
                         value = password,
                         onValueChange = { password = it; error = null },
-                        label = { Text("Password", color = onSurfaceColor.copy(alpha = 0.8f)) },
+                        label = { Text(Translator.t("Password", selectedLangCode), color = onSurfaceColor.copy(alpha = 0.8f)) },
                         singleLine = true,
                         visualTransformation = PasswordVisualTransformation(),
                         modifier = Modifier.fillMaxWidth(),
@@ -199,7 +208,7 @@ fun LoginScreen(
                                 isLoading = false
                                 result.fold(
                                     onSuccess = { onLoginSuccess() },
-                                    onFailure = { error = it.message ?: "Login failed" }
+                                    onFailure = { error = it.message ?: Translator.t("Login failed", selectedLangCode) }
                                 )
                             }
                         },
@@ -207,7 +216,7 @@ fun LoginScreen(
                         enabled = !isLoading,
                         colors = ButtonDefaults.buttonColors(containerColor = MedTriagePrimary)
                     ) {
-                        Text(if (isLoading) "Signing in…" else "Sign In")
+                        Text(if (isLoading) Translator.t("Signing in…", selectedLangCode) else Translator.t("Sign In", selectedLangCode))
                     }
                 }
             }

@@ -31,11 +31,13 @@ import androidx.compose.ui.Alignment
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.medtriage.app.ui.utils.Translator
 import com.medtriage.app.ui.AppViewModel
 import com.medtriage.app.ui.theme.Spacing
 
 @Composable
 fun MoreScreen(
+    selectedLangCode: String = "en",
     onLanguage: () -> Unit,
     onLogout: () -> Unit,
     viewModel: MoreViewModel = hiltViewModel(),
@@ -50,7 +52,7 @@ fun MoreScreen(
     ) {
         Spacer(modifier = Modifier.height(Spacing.space16))
         Text(
-            text = "More",
+            text = Translator.t("More", selectedLangCode),
             style = MaterialTheme.typography.headlineSmall,
             color = MaterialTheme.colorScheme.onSurface
         )
@@ -71,7 +73,7 @@ fun MoreScreen(
             ) {
                 Icon(Icons.Default.Settings, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(modifier = Modifier.size(Spacing.space16))
-                Text("Settings", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+                Text(Translator.t("Settings", selectedLangCode), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
                 Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             HorizontalDivider()
@@ -83,9 +85,9 @@ fun MoreScreen(
             ) {
                 Icon(Icons.Default.DarkMode, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(modifier = Modifier.size(Spacing.space16))
-                Text("Theme", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+                Text(Translator.t("Theme", selectedLangCode), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
                 Spacer(modifier = Modifier.size(Spacing.space8))
-                Text(if (darkTheme) "Dark" else "Light", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(if (darkTheme) Translator.t("Dark", selectedLangCode) else Translator.t("Light", selectedLangCode), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Switch(
                     checked = darkTheme,
                     onCheckedChange = { appViewModel.setDarkTheme(it) }
@@ -101,7 +103,7 @@ fun MoreScreen(
             ) {
                 Icon(Icons.Default.Language, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(modifier = Modifier.size(Spacing.space16))
-                Text("Language", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+                Text(Translator.t("Language", selectedLangCode), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
                 Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             HorizontalDivider()
@@ -114,7 +116,7 @@ fun MoreScreen(
             ) {
                 Icon(Icons.Default.Cloud, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(modifier = Modifier.size(Spacing.space16))
-                Text("Check API status", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+                Text(Translator.t("Check API status", selectedLangCode), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
                 if (moreState.healthCheckLoading) {
                     CircularProgressIndicator(modifier = Modifier.size(24.dp))
                 } else {
@@ -145,7 +147,7 @@ fun MoreScreen(
             ) {
                 Icon(Icons.Default.Info, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(modifier = Modifier.size(Spacing.space16))
-                Text("About", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+                Text(Translator.t("About", selectedLangCode), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
                 Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             HorizontalDivider()
@@ -158,7 +160,7 @@ fun MoreScreen(
             ) {
                 Icon(Icons.Default.Logout, contentDescription = null, tint = MaterialTheme.colorScheme.error)
                 Spacer(modifier = Modifier.size(Spacing.space16))
-                Text("Log Out", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.error, modifier = Modifier.weight(1f))
+                Text(Translator.t("Log Out", selectedLangCode), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.error, modifier = Modifier.weight(1f))
                 Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.error)
             }
         }

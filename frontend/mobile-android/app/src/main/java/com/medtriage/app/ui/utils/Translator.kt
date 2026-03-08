@@ -5,7 +5,6 @@ import androidx.compose.runtime.Composable
 object Translator {
     
     // Fallback if translation is missing
-    @Composable
     fun t(englishText: String, langCode: String): String {
         if (langCode == "en") return englishText
         
@@ -359,6 +358,22 @@ object Translator {
             "kn" to "ಮೌಲ್ಯಮಾಪನ ಮಾಡಲಾಗುತ್ತಿದೆ…",
             "ml" to "വിലയിരുത്തുന്നു…",
             "bn" to "মূল্যায়ন করা হচ্ছে…"
+        ),
+        "Switch to light theme" to mapOf(
+            "hi" to "लाइट थीम पर स्विच करें",
+            "ta" to "ஒளி தீமிற்கு மாற்றவும்",
+            "te" to "లైట్ థీమ్‌కు మారండి",
+            "kn" to "ಲೈಟ್ ಥೀಮ್‌ಗೆ ಬದಲಾಯಿಸಿ",
+            "ml" to "ലൈറ്റ് തീമിലേക്ക് മാറുക",
+            "bn" to "লাইট থিমে স্যুইচ করুন"
+        ),
+        "Switch to dark theme" to mapOf(
+            "hi" to "डार्क थीम पर स्विच करें",
+            "ta" to "இருண்ட தீமிற்கு மாற்றவும்",
+            "te" to "డార్క్ థీమ్‌కు మారండి",
+            "kn" to "ಡಾರ್ಕ್ ಥೀಮ್‌ಗೆ ಬದಲಾಯಿಸಿ",
+            "ml" to "ഡാർക്ക് തീമിലേക്ക് മാറുക",
+            "bn" to "ডার্ক থিমে স্যুইচ করুন"
         )
     )
 }

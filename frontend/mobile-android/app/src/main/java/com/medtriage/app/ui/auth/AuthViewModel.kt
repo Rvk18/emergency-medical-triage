@@ -15,6 +15,7 @@ import javax.inject.Inject
 data class AuthUiState(
     val isLoggedIn: Boolean = false,
     val hasLanguageSelected: Boolean = false,
+    val languageCode: String = "en",
     val hasRoleSelected: Boolean = false,
     val role: String = "healthcare_worker",
     val isLoading: Boolean = true
@@ -34,6 +35,7 @@ class AuthViewModel @Inject constructor(
         AuthUiState(
             isLoggedIn = !token.isNullOrBlank(),
             hasLanguageSelected = !language.isNullOrBlank(),
+            languageCode = language ?: "en",
             hasRoleSelected = !role.isNullOrBlank(),
             role = role ?: "healthcare_worker",
             isLoading = false

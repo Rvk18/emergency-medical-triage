@@ -23,6 +23,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.medtriage.app.ui.utils.Translator
 import com.medtriage.app.ui.theme.Spacing
 
 data class HospitalListItem(
@@ -43,7 +44,7 @@ private val mockHospitals = listOf(
 )
 
 @Composable
-fun NearbyHospitalsScreen() {
+fun NearbyHospitalsScreen(selectedLangCode: String = "en") {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -52,12 +53,12 @@ fun NearbyHospitalsScreen() {
     ) {
         Spacer(modifier = Modifier.height(Spacing.space16))
         Text(
-            text = "Nearby Hospitals",
+            text = Translator.t("Nearby Hospitals", selectedLangCode),
             style = MaterialTheme.typography.headlineSmall,
             color = MaterialTheme.colorScheme.onSurface
         )
         Text(
-            text = "Emergency facilities in your area",
+            text = Translator.t("Emergency facilities in your area", selectedLangCode),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = Spacing.space4)

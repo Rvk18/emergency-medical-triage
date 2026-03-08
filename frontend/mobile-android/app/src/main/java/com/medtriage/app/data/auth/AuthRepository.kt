@@ -14,17 +14,15 @@ class AuthRepository @Inject constructor(
     suspend fun getSessionRole(): String = userPreferences.userRole.first() ?: "Healthcare Worker"
 
     suspend fun login(emailOrPhone: String, password: String): Result<Unit> {
+        // Mock: accept any non-empty credentials (no backend auth call)
+        if (emailOrPhone.isBlank() || password.isBlank()) {
+            return Result.failure(IllegalArgumentException("Email/phone and password required"))
+        }
         return try {
-            // Mock: accept any non-empty credentials; real app would call /auth/login
-            if (emailOrPhone.isBlank() || password.isBlank()) {
-                Result.failure(IllegalArgumentException("Email/phone and password required"))
-            } else {
-                userPreferences.setAuthToken("mock_jwt_${System.currentTimeMillis()}")
-                // Role is set in RoleSelector; do not override here
-                Result.success(Unit)
-            }
+            userPreferences.setAuthToken("mock_jwt_${System.currentTimeMillis()}")
+            Result.success(Unit)
         } catch (e: Exception) {
-            Result.failure(e)
+            Result.failure(IllegalArgumentException("Login failed: ${e.message}", e))
         }
     }
 

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -29,6 +30,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.medtriage.app.ui.utils.Translator
 import com.medtriage.app.ui.theme.Spacing
 
 @Composable
@@ -61,6 +63,7 @@ fun RoleSelectorScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .statusBarsPadding()
                 .verticalScroll(rememberScrollState())
         ) {
             // Top bar: title + theme toggle
@@ -78,11 +81,15 @@ fun RoleSelectorScreen(
                     color = onBackgroundColor
                 )
                 Spacer(modifier = Modifier.weight(1f))
-                IconButton(onClick = { onDarkThemeChange(!darkTheme) }) {
+                IconButton(
+                    onClick = { onDarkThemeChange(!darkTheme) },
+                    modifier = Modifier.padding(8.dp)
+                ) {
                     Icon(
-                        if (darkTheme) Icons.Default.LightMode else Icons.Default.DarkMode,
-                        contentDescription = if (darkTheme) "Switch to light theme" else "Switch to dark theme",
-                        tint = onBackgroundColor
+                        imageVector = if (darkTheme) Icons.Default.LightMode else Icons.Default.DarkMode,
+                        contentDescription = if (darkTheme) Translator.t("Switch to light theme", selectedLangCode) else Translator.t("Switch to dark theme", selectedLangCode),
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(28.dp)
                     )
                 }
             }
@@ -102,12 +109,12 @@ fun RoleSelectorScreen(
                 )
                 Spacer(modifier = Modifier.height(Spacing.space16))
                 Text(
-                    text = "MedTriage AI",
+                    text = Translator.t("MedTriage AI", selectedLangCode),
                     style = MaterialTheme.typography.headlineMedium,
                     color = MaterialTheme.colorScheme.primary
                 )
                 Text(
-                    text = "Emergency Medical Triage",
+                    text = Translator.t("Emergency Medical Triage", selectedLangCode),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = Spacing.space8)
@@ -115,7 +122,7 @@ fun RoleSelectorScreen(
                 Spacer(modifier = Modifier.height(Spacing.sectionGap))
 
                 Text(
-                    text = "Select Your Role",
+                    text = Translator.t("Select Your Role", selectedLangCode),
                     style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier
@@ -143,12 +150,12 @@ fun RoleSelectorScreen(
                             Spacer(modifier = Modifier.size(Spacing.space16))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Healthcare Worker",
+                                    text = Translator.t("Healthcare Worker", selectedLangCode),
                                     style = MaterialTheme.typography.titleMedium,
                                     color = MaterialTheme.colorScheme.onPrimary
                                 )
                                 Text(
-                                    text = "RMP, Nurse, or Medical Professional",
+                                    text = Translator.t("RMP, Nurse, or Medical Professional", selectedLangCode),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.9f)
                                 )
@@ -173,12 +180,12 @@ fun RoleSelectorScreen(
                             Spacer(modifier = Modifier.size(Spacing.space16))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Patient / User",
+                                    text = Translator.t("Patient / User", selectedLangCode),
                                     style = MaterialTheme.typography.titleMedium,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
-                                    text = "Request medical assistance",
+                                    text = Translator.t("Request medical assistance", selectedLangCode),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -191,7 +198,7 @@ fun RoleSelectorScreen(
                 
                 // Language Selection Block
                 Text(
-                    text = "Language / भाषा",
+                    text = Translator.t("Language / भाषा", selectedLangCode),
                     style = MaterialTheme.typography.labelLarge,
                     color = onSurfaceColor.copy(alpha = 0.9f),
                     modifier = Modifier.padding(bottom = 8.dp)
@@ -235,7 +242,7 @@ fun RoleSelectorScreen(
                 Spacer(modifier = Modifier.height(Spacing.space24))
 
                 Text(
-                    text = "Your selection will determine your access level",
+                    text = Translator.t("Your selection will determine your access level", selectedLangCode),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

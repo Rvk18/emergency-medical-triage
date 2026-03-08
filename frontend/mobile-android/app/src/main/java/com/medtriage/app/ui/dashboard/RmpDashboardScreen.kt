@@ -9,6 +9,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import com.medtriage.app.ui.utils.Translator
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.medtriage.app.data.rmp.RmpProfile
@@ -21,6 +22,7 @@ import com.medtriage.app.ui.theme.Spacing
 fun RmpDashboardScreen(
     profile: RmpProfile?,
     loading: Boolean,
+    selectedLangCode: String = "en",
     onStartTriage: () -> Unit,
     onShowLearning: () -> Unit = {}
 ) {
@@ -31,12 +33,12 @@ fun RmpDashboardScreen(
             .verticalScroll(rememberScrollState())
     ) {
         Text(
-            "RMP Dashboard",
+            Translator.t("RMP Dashboard", selectedLangCode),
             style = MaterialTheme.typography.headlineMedium,
             color = MaterialTheme.colorScheme.primary
         )
         Text(
-            "Your competency and recent activity",
+            Translator.t("Your competency and recent activity", selectedLangCode),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = Spacing.space4)
@@ -49,23 +51,23 @@ fun RmpDashboardScreen(
             }
             profile == null -> {
                 EmptyState(
-                    title = "No profile",
-                    description = "Your profile could not be loaded. Pull to refresh or try again later."
+                    title = Translator.t("No profile", selectedLangCode),
+                    description = Translator.t("Your profile could not be loaded. Pull to refresh or try again later.", selectedLangCode)
                 )
             }
             else -> {
                 val p = profile
-                SectionCard(title = "Profile") {
-                    Text("Competency: ${p.competencyScore}%", style = MaterialTheme.typography.titleSmall)
-                    Text("Level: ${p.levelBadge}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("Cases: ${p.casesCompleted} • Success: ${p.successRatePercent}%", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                SectionCard(title = Translator.t("Profile", selectedLangCode)) {
+                    Text("${Translator.t("Competency", selectedLangCode)}: ${p.competencyScore}%", style = MaterialTheme.typography.titleSmall)
+                    Text("${Translator.t("Level", selectedLangCode)}: ${p.levelBadge}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("${Translator.t("Cases", selectedLangCode)}: ${p.casesCompleted} • ${Translator.t("Success", selectedLangCode)}: ${p.successRatePercent}%", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Spacer(Modifier.height(Spacing.space16))
-                SectionCard(title = "Recent cases") {
+                SectionCard(title = Translator.t("Recent cases", selectedLangCode)) {
                     if (p.recentCases.isEmpty()) {
                         EmptyState(
-                            title = "No recent cases",
-                            description = "Completed triage cases will appear here.",
+                            title = Translator.t("No recent cases", selectedLangCode),
+                            description = Translator.t("Completed triage cases will appear here.", selectedLangCode),
                             modifier = Modifier.padding(vertical = Spacing.space16)
                         )
                     } else {
@@ -76,11 +78,11 @@ fun RmpDashboardScreen(
                 }
                 Spacer(Modifier.height(Spacing.sectionGap))
                 androidx.compose.material3.FilledTonalButton(onClick = onStartTriage, modifier = Modifier.fillMaxWidth()) {
-                    Text("Start Triage")
+                    Text(Translator.t("Start Triage", selectedLangCode))
                 }
                 Spacer(Modifier.height(Spacing.space12))
                 androidx.compose.material3.OutlinedButton(onClick = onShowLearning, modifier = Modifier.fillMaxWidth()) {
-                    Text("Learning modules")
+                    Text(Translator.t("Learning modules", selectedLangCode))
                 }
                 Spacer(Modifier.height(Spacing.space40))
             }
