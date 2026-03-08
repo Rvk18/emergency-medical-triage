@@ -19,9 +19,12 @@ import com.medtriage.app.data.triage.PatientInfo
 import com.medtriage.app.ui.components.TriageStepBar
 import com.medtriage.app.ui.theme.Spacing
 
+import com.medtriage.app.ui.utils.Translator
+
 @Composable
 fun TriageStep1PatientInfo(
     patientInfo: PatientInfo,
+    selectedLangCode: String = "en",
     onUpdate: (PatientInfo) -> Unit,
     onNext: () -> Unit,
     onBack: () -> Unit
@@ -37,30 +40,30 @@ fun TriageStep1PatientInfo(
             .padding(horizontal = Spacing.screenHorizontal)
             .verticalScroll(rememberScrollState())
     ) {
-        TriageStepBar(stepIndicator = "Step 1 of 4", onBack = onBack)
+        TriageStepBar(stepIndicator = "${Translator.t("Step", selectedLangCode)} 1 ${Translator.t("of", selectedLangCode)} 4", onBack = onBack)
         Spacer(Modifier.height(Spacing.space8))
-        Text("Patient Information", style = androidx.compose.material3.MaterialTheme.typography.headlineSmall)
+        Text(Translator.t("Patient Information", selectedLangCode), style = androidx.compose.material3.MaterialTheme.typography.headlineSmall)
         Spacer(Modifier.height(Spacing.sectionGap))
         OutlinedTextField(
             value = age,
             onValueChange = { age = it; onUpdate(patientInfo.copy(age = it.toIntOrNull())) },
-            label = { Text("Age") },
+            label = { Text(Translator.t("Age", selectedLangCode)) },
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(Modifier.height(Spacing.space8))
         OutlinedTextField(
             value = gender,
             onValueChange = { gender = it; onUpdate(patientInfo.copy(gender = it.ifBlank { null })) },
-            label = { Text("Gender") },
+            label = { Text(Translator.t("Gender", selectedLangCode)) },
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(Modifier.height(Spacing.space8))
-        Text("Location: GPS auto-detect (placeholder)", style = androidx.compose.material3.MaterialTheme.typography.bodySmall)
+        Text(Translator.t("Location: GPS auto-detect", selectedLangCode), style = androidx.compose.material3.MaterialTheme.typography.bodySmall)
         Spacer(Modifier.height(Spacing.space8))
         OutlinedTextField(
             value = history,
             onValueChange = { history = it; onUpdate(patientInfo.copy(medicalHistory = it.ifBlank { null })) },
-            label = { Text("Medical history (optional)") },
+            label = { Text(Translator.t("Medical history (optional)", selectedLangCode)) },
             modifier = Modifier.fillMaxWidth(),
             minLines = 2
         )
@@ -68,10 +71,10 @@ fun TriageStep1PatientInfo(
         OutlinedTextField(
             value = allergies,
             onValueChange = { allergies = it; onUpdate(patientInfo.copy(allergies = it.ifBlank { null })) },
-            label = { Text("Allergies (optional)") },
+            label = { Text(Translator.t("Allergies (optional)", selectedLangCode)) },
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(Modifier.height(Spacing.space24))
-        Button(onClick = onNext, modifier = Modifier.fillMaxWidth()) { Text("Next") }
+        Button(onClick = onNext, modifier = Modifier.fillMaxWidth()) { Text(Translator.t("Next", selectedLangCode)) }
     }
 }

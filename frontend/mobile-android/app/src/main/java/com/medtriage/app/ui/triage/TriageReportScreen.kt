@@ -19,9 +19,12 @@ import com.medtriage.app.ui.components.SectionCard
 import com.medtriage.app.ui.components.SeverityChip
 import com.medtriage.app.ui.theme.Spacing
 
+import com.medtriage.app.ui.utils.Translator
+
 @Composable
 fun TriageReportScreen(
     result: TriageResult,
+    selectedLangCode: String = "en",
     onProceedToHospitalMatching: () -> Unit,
     onBack: () -> Unit
 ) {
@@ -31,20 +34,20 @@ fun TriageReportScreen(
             .padding(horizontal = Spacing.screenHorizontal)
             .verticalScroll(rememberScrollState())
     ) {
-        TriageStepBar(stepIndicator = "Report", onBack = onBack)
+        TriageStepBar(stepIndicator = Translator.t("Report", selectedLangCode), onBack = onBack)
         Spacer(Modifier.height(Spacing.space8))
-        Text("Triage Report", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onSurface)
+        Text(Translator.t("Triage Report", selectedLangCode), style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onSurface)
         Spacer(Modifier.height(Spacing.sectionGap))
 
-        SectionCard(title = "Summary") {
+        SectionCard(title = Translator.t("Summary", selectedLangCode)) {
             Text("ID: ${result.emergencyId}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(Spacing.space12))
-            SeverityChip(severity = result.severity, modifier = Modifier.padding(bottom = Spacing.space12))
+            SeverityChip(severity = result.severity, selectedLangCode = selectedLangCode, modifier = Modifier.padding(bottom = Spacing.space12))
             ConfidenceBar(confidencePercent = result.confidencePercent)
         }
         Spacer(Modifier.height(Spacing.space16))
 
-        SectionCard(title = "Recommended actions") {
+        SectionCard(title = Translator.t("Recommended actions", selectedLangCode)) {
             result.recommendedActions.forEach { action ->
                 Text("• $action", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(vertical = Spacing.space4))
             }
@@ -52,7 +55,7 @@ fun TriageReportScreen(
         Spacer(Modifier.height(Spacing.sectionGap))
 
         Button(onClick = onProceedToHospitalMatching, modifier = Modifier.fillMaxWidth()) {
-            Text("Proceed to Hospital Matching")
+            Text(Translator.t("Proceed to Hospital Matching", selectedLangCode))
         }
         Spacer(Modifier.height(Spacing.space40))
     }

@@ -28,9 +28,12 @@ import com.medtriage.app.ui.components.SeverityChip
 import com.medtriage.app.ui.components.TriageStepBar
 import com.medtriage.app.ui.theme.Spacing
 
+import com.medtriage.app.ui.utils.Translator
+
 @Composable
 fun TriageStep4Result(
     result: TriageResult,
+    selectedLangCode: String = "en",
     onProceedToReport: () -> Unit,
     onOverride: () -> Unit,
     onBack: () -> Unit
@@ -41,10 +44,10 @@ fun TriageStep4Result(
 
     if (showOverrideDialog) {
         ConfirmationDialog(
-            title = "Override severity",
-            body = "Changing the AI assessment will be logged for audit. Confirm override?",
-            confirmLabel = "Override",
-            dismissLabel = "Cancel",
+            title = Translator.t("Override severity", selectedLangCode),
+            body = Translator.t("Changing the AI assessment will be logged for audit. Confirm override?", selectedLangCode),
+            confirmLabel = Translator.t("Override", selectedLangCode),
+            dismissLabel = Translator.t("Cancel", selectedLangCode),
             onConfirm = {
                 showOverrideDialog = false
                 onOverride()
@@ -59,51 +62,53 @@ fun TriageStep4Result(
             .padding(horizontal = Spacing.screenHorizontal)
             .verticalScroll(rememberScrollState())
     ) {
-        TriageStepBar(stepIndicator = "Step 4 of 4", onBack = onBack)
+        TriageStepBar(stepIndicator = "${Translator.t("Step", selectedLangCode)} 4 ${Translator.t("of", selectedLangCode)} 4", onBack = onBack)
         Spacer(Modifier.height(Spacing.space8))
         if (result.severity == SeverityLevel.CRITICAL) {
-            CriticalBanner(message = "CRITICAL — Immediate transport. Do not delay.")
+            CriticalBanner(message = Translator.t("CRITICAL — Immediate transport. Do not delay.", selectedLangCode))
             Spacer(Modifier.height(Spacing.space16))
         }
-        Text("Result", style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onSurface)
+        Text(Translator.t("Result", selectedLangCode), style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onSurface)
         Spacer(Modifier.height(Spacing.sectionGap))
 
-        SectionCard(title = "Assessment") {
-            SeverityChip(severity = displaySeverity, modifier = Modifier.padding(bottom = Spacing.space12))
+        SectionCard(title = Translator.t("Assessment", selectedLangCode)) {
+            SeverityChip(severity = displaySeverity, selectedLangCode = selectedLangCode, modifier = Modifier.padding(bottom = Spacing.space12))
             ConfidenceBar(confidencePercent = result.confidencePercent)
         }
         if (showFlagForReview) {
             Spacer(Modifier.height(Spacing.space16))
             SectionCard(
-                title = "Flag for doctor review",
+                title = Translator.t("Flag for doctor review", selectedLangCode),
                 variant = SectionCardVariant.Warning
             ) {
                 Text(
-                    "Treat as HIGH priority. Low confidence — recommend doctor review.",
+                    Translator.t("Treat as HIGH priority. Low confidence — recommend doctor review.", selectedLangCode),
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
         }
         Spacer(Modifier.height(Spacing.space16))
 
-        SectionCard(title = "Recommended actions") {
+        SectionCard(title = Translator.t("Recommended actions", selectedLangCode)) {
             result.recommendedActions.forEach { action ->
+                // Note: action strings from AI might be in English unless AI is prompted to translate.
+                // For hackathon, we keep the dynamic AI output as is or wrap it if we have fixed patterns.
                 Text("• $action", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(vertical = Spacing.space4))
             }
         }
         Spacer(Modifier.height(Spacing.space16))
 
-        SectionCard(title = "Safety notice") {
+        SectionCard(title = Translator.t("Safety notice", selectedLangCode)) {
             result.safetyDisclaimers.forEach { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         }
         Spacer(Modifier.height(Spacing.sectionGap))
 
         OutlinedButton(onClick = { showOverrideDialog = true }, modifier = Modifier.fillMaxWidth()) {
-            Text("Override")
+            Text(Translator.t("Override", selectedLangCode))
         }
         Spacer(Modifier.height(Spacing.space12))
         Button(onClick = onProceedToReport, modifier = Modifier.fillMaxWidth()) {
-            Text("Proceed to Report")
+            Text(Translator.t("Proceed to Report", selectedLangCode))
         }
         Spacer(Modifier.height(Spacing.space40))
     }

@@ -29,6 +29,8 @@ import com.medtriage.app.data.triage.SeverityLevel
 import com.medtriage.app.ui.components.SeverityChip
 import com.medtriage.app.ui.components.SectionCard
 import com.medtriage.app.ui.theme.Spacing
+import com.medtriage.app.ui.utils.Translator
+
 
 data class PatientCase(
     val id: String,
@@ -44,8 +46,10 @@ private val mockPatientCases = listOf(
     PatientCase("CASE0089", "2026-02-15 09:20", SeverityLevel.MEDIUM, "Completed", "Metro Emergency Center", "Dr. Priya Sharma")
 )
 
+
 @Composable
 fun PatientDashboardScreen(
+    selectedLangCode: String = "en",
     onRequestEmergency: () -> Unit
 ) {
     val scrollState = rememberScrollState()
@@ -59,12 +63,12 @@ fun PatientDashboardScreen(
     ) {
         Spacer(modifier = Modifier.height(Spacing.space16))
         Text(
-            text = "My Health Records",
+            text = Translator.t("My Health Records", selectedLangCode),
             style = MaterialTheme.typography.headlineSmall,
             color = MaterialTheme.colorScheme.onSurface
         )
         Text(
-            text = "View your triage history and status",
+            text = Translator.t("View your triage history and status", selectedLangCode),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = Spacing.space4)
@@ -73,7 +77,7 @@ fun PatientDashboardScreen(
 
         if (hasActiveEmergency) {
             SectionCard(
-                title = "Active Emergency",
+                title = Translator.t("Active Emergency", selectedLangCode),
                 variant = com.medtriage.app.ui.components.SectionCardVariant.Critical,
                 modifier = Modifier.padding(bottom = Spacing.space16)
             ) {
@@ -87,7 +91,7 @@ fun PatientDashboardScreen(
                     Spacer(modifier = Modifier.size(Spacing.space12))
                     Column {
                         Text(
-                            text = "Your case is being handled. Help is on the way.",
+                            text = Translator.t("Your case is being handled. Help is on the way.", selectedLangCode),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurface
                         )
@@ -118,7 +122,7 @@ fun PatientDashboardScreen(
                     }
                     Spacer(modifier = Modifier.size(Spacing.space16))
                     Column {
-                        Text("Patient Profile", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
+                        Text(Translator.t("Patient Profile", selectedLangCode), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
                         Text("ID: PAT-2026-00567", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
@@ -128,12 +132,13 @@ fun PatientDashboardScreen(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Column {
-                        Text("Total Cases", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(Translator.t("Total Cases", selectedLangCode), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text("${mockPatientCases.size}", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
                     }
                     Column {
-                        Text("Last Visit", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text("2 days ago", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+                        Text(Translator.t("Last Visit", selectedLangCode), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        // Note: "2 days ago" would need dynamic translation if real. For mock:
+                        Text(Translator.t("2 days ago", selectedLangCode), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
                     }
                 }
             }
@@ -141,7 +146,7 @@ fun PatientDashboardScreen(
         Spacer(modifier = Modifier.height(Spacing.space24))
 
         Text(
-            text = "My Cases",
+            text = Translator.t("My Cases", selectedLangCode),
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.padding(bottom = Spacing.space12)
@@ -157,7 +162,7 @@ fun PatientDashboardScreen(
                 ) {
                     Icon(Icons.Default.Description, contentDescription = null, modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(modifier = Modifier.height(Spacing.space12))
-                    Text("No medical cases", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(Translator.t("No medical cases", selectedLangCode), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         } else {
@@ -180,7 +185,7 @@ fun PatientDashboardScreen(
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(case.id, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurface)
                                     Spacer(modifier = Modifier.size(Spacing.space8))
-                                    SeverityChip(severity = case.severity)
+                                    SeverityChip(severity = case.severity, selectedLangCode = selectedLangCode)
                                 }
                                 Text(case.date, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
@@ -192,19 +197,19 @@ fun PatientDashboardScreen(
                                     tint = if (case.status == "In Progress") MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary
                                 )
                                 Spacer(modifier = Modifier.size(4.dp))
-                                Text(case.status, style = MaterialTheme.typography.labelMedium)
+                                Text(Translator.t(case.status, selectedLangCode), style = MaterialTheme.typography.labelMedium)
                             }
                         }
                         Spacer(modifier = Modifier.height(Spacing.space12))
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.LocationOn, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                             Spacer(modifier = Modifier.size(4.dp))
-                            Text(case.hospital, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(hospitalNameTranslated(case.hospital, selectedLangCode), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.Description, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                             Spacer(modifier = Modifier.size(4.dp))
-                            Text("Handled by: ${case.rmpName}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("${Translator.t("Handled by", selectedLangCode)}: ${case.rmpName}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
@@ -219,8 +224,14 @@ fun PatientDashboardScreen(
         ) {
             Icon(Icons.Default.Warning, contentDescription = null, modifier = Modifier.size(20.dp))
             Spacer(modifier = Modifier.size(Spacing.space8))
-            Text("Request Emergency Assistance")
+            Text(Translator.t("Request Emergency Assistance", selectedLangCode))
         }
         Spacer(modifier = Modifier.height(Spacing.space32))
     }
+}
+
+// Private helper for hospital name translation if mocked
+@Composable
+private fun hospitalNameTranslated(name: String, langCode: String): String {
+    return Translator.t(name, langCode)
 }

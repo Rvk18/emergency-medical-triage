@@ -23,7 +23,8 @@ import com.medtriage.app.ui.theme.Spacing
 fun SeverityChip(
     severity: SeverityLevel,
     modifier: Modifier = Modifier,
-    label: String = severity.name.lowercase().replaceFirstChar { it.uppercase() }
+    selectedLangCode: String = "en",
+    label: String = com.medtriage.app.ui.utils.Translator.t(severity.name.lowercase().replaceFirstChar { it.uppercase() }, selectedLangCode)
 ) {
     val (surface, onSurface) = when (severity) {
         SeverityLevel.CRITICAL -> SeverityCriticalSurface to SeverityCritical
