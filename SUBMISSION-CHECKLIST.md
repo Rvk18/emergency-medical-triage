@@ -10,9 +10,17 @@ Use this checklist to ensure your hackathon submission is complete.
 |---|------|--------|--------|-------|
 | **1** | **Project PPT** | You | ⬜ | Step 1 filter — crucial. |
 | **2** | **Demo video** | You | ⬜ | YouTube or Google Drive link. |
-| **3** | **Working MVP link** | You | ⬜ | Deploy web on AWS and make it public. Mobile: see [MVP deploy runbook](docs/MVP-DEPLOY-RUNBOOK.md). |
+| **3** | **Working MVP link** | You | ✅ | **Web:** Hosted (S3 + CloudFront). **Android:** Upload APK to S3 — see [MVP deploy runbook](docs/MVP-DEPLOY-RUNBOOK.md) §2 Option A; fill APK URL in PROJECT-SUMMARY after upload. |
 | **4** | **GitHub repository** | You | ⬜ | **Ensure it is Public.** Repo: https://github.com/Rvk18/emergency-medical-triage |
 | **5** | **Project summary** | Done | ✅ | [PROJECT-SUMMARY.md](PROJECT-SUMMARY.md) — one-pager; fill in MVP/video/PPT links before submit. |
+
+---
+
+## Completed (for reference)
+
+- **Backend:** All planned APIs (triage, hospitals, route, RMP Learning, Eka, Cognito auth) implemented and deployed.
+- **Web app:** Built and hosted on S3 + CloudFront; public URL in PROJECT-SUMMARY.
+- **Android app:** Completed; build APK and upload to S3 for download link (runbook §2 Option A).
 
 ---
 
@@ -28,8 +36,8 @@ Use this checklist to ensure your hackathon submission is complete.
 
 ## #3 — Working MVP (runbook for later)
 
-- **Web app:** Deploy `frontend/web/` to AWS (e.g. S3 + CloudFront, or Amplify). Make the URL public and add it to [PROJECT-SUMMARY.md](PROJECT-SUMMARY.md) and your PPT.  
-- **Mobile app:** Options to “make it available” for evaluators are in **[docs/MVP-DEPLOY-RUNBOOK.md](docs/MVP-DEPLOY-RUNBOOK.md)** (APK on Drive, internal testing track, etc.).
+- **Web app:** ✅ Deployed `frontend/web/` to AWS (S3 + CloudFront). URL: see PROJECT-SUMMARY.md.
+- **Mobile app:** Build APK (`./gradlew assembleDebug` in `frontend/mobile-android/`), then upload to S3 for download — **[docs/MVP-DEPLOY-RUNBOOK.md](docs/MVP-DEPLOY-RUNBOOK.md)** §2 Option A (APK on S3). Use the CloudFront URL `/apk/MedTriage.apk` as the download link. Alternatives: Google Drive, internal testing track, or “build from source” — see runbook.
 
 ---
 

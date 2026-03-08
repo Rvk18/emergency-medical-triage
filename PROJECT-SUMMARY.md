@@ -63,11 +63,13 @@ We **augment RMPs** (not replace them) with an AI-powered platform:
 
 | Item | Link |
 |------|------|
-| **Working MVP (web)** | _[Deploy web app and add URL here]_ |
+| **Working MVP (web)** | https://d2x5u793glu2eu.cloudfront.net |
+| **Android APK (download)** | https://d2x5u793glu2eu.cloudfront.net/apk/MedTriage.apk — _Upload APK to S3 first; see [MVP-DEPLOY-RUNBOOK.md](docs/MVP-DEPLOY-RUNBOOK.md) §2 Option A._ |
 | **Demo video** | _[YouTube or Drive link]_ |
 | **Project PPT** | _[Link to presentation]_ |
 | **GitHub repository** | https://github.com/Rvk18/emergency-medical-triage **(ensure repo is Public)** |
-| **Mobile app (optional)** | _[APK download or store link — see docs/MVP-DEPLOY-RUNBOOK.md]_ |
+
+**Estimated implementation cost (AWS):** ~**$110–200/month** for dev/low traffic (NAT + Aurora Serverless v2 + Bedrock dominate). Details: [docs/IMPLEMENTATION-COST-ESTIMATE.md](docs/IMPLEMENTATION-COST-ESTIMATE.md).
 
 ---
 
