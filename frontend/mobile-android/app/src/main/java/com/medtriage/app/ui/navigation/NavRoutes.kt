@@ -5,4 +5,6 @@ object NavRoutes {
     const val Hospitals = "hospitals"
     const val Dashboard = "dashboard"
     const val More = "more"
+    const val PatientDashboard = "patient_dashboard"
+    const val PatientEmergency = "patient_emergency"
 }

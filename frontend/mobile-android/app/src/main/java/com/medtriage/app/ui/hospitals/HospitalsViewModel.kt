@@ -20,6 +20,7 @@ data class HospitalsUiState(
     val error: String? = null,
     val selectedHospital: HospitalMatch? = null,
     val routeSteps: List<RouteStep> = emptyList(),
+    val routeResult: com.medtriage.app.data.hospitals.RouteResult? = null,
     val showHandoff: Boolean = false
 )
 
@@ -49,9 +50,32 @@ class HospitalsViewModel @Inject constructor(
         }
     }
 
+    /** Default origin for route (e.g. Bangalore) when device location not available. */
+    private val defaultOriginLat = 12.9716
+    private val defaultOriginLon = 77.5946
+
     fun selectHospital(hospital: HospitalMatch) {
         viewModelScope.launch {
-            _state.update { it.copy(selectedHospital = hospital, routeSteps = emptyList()) }
+            _state.update {
+                it.copy(
+                    selectedHospital = hospital,
+                    routeSteps = emptyList(),
+                    routeResult = null
+                )
+            }
+            if (hospital.lat != null && hospital.lon != null) {
+                hospitalRepository.getRoute(
+                    defaultOriginLat,
+                    defaultOriginLon,
+                    hospital.lat,
+                    hospital.lon
+                ).fold(
+                    onSuccess = { routeResult ->
+                        _state.update { it.copy(routeResult = routeResult) }
+                    },
+                    onFailure = { }
+                )
+            }
             hospitalRepository.getRouteSteps(hospital.id).first().fold(
                 onSuccess = { steps ->
                     _state.update { it.copy(routeSteps = steps) }
@@ -62,7 +86,7 @@ class HospitalsViewModel @Inject constructor(
     }
 
     fun changeHospital() {
-        _state.update { it.copy(selectedHospital = null, routeSteps = emptyList()) }
+        _state.update { it.copy(selectedHospital = null, routeSteps = emptyList(), routeResult = null) }
     }
 
     fun showHandoffReport() {
@@ -70,6 +94,6 @@ class HospitalsViewModel @Inject constructor(
     }
 
     fun handoffDone() {
-        _state.update { it.copy(showHandoff = false, selectedHospital = null, routeSteps = emptyList()) }
+        _state.update { it.copy(showHandoff = false, selectedHospital = null, routeSteps = emptyList(), routeResult = null) }
     }
 }

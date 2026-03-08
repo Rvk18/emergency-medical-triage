@@ -12,41 +12,57 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.medtriage.app.ui.auth.AuthViewModel
 import com.medtriage.app.ui.screens.LanguageSelectorScreen
 import com.medtriage.app.ui.screens.LoginScreen
+import com.medtriage.app.ui.screens.RoleSelectorScreen
 import com.medtriage.app.ui.shell.AppShell
+import com.medtriage.app.ui.theme.MedTriageTheme
 
 @Composable
 fun MedTriageApp(
-    authViewModel: AuthViewModel = hiltViewModel()
+    authViewModel: AuthViewModel = hiltViewModel(),
+    appViewModel: AppViewModel = hiltViewModel()
 ) {
     val authState by authViewModel.authState.collectAsState()
+    val darkTheme by appViewModel.darkTheme.collectAsState(initial = false)
 
-    when {
-        authState.isLoading -> {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
+    MedTriageTheme(darkTheme = darkTheme) {
+        when {
+            authState.isLoading -> {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
             }
-        }
-        !authState.isLoggedIn -> {
-            LoginScreen(
-                onLoginSuccess = { },
-                onLogin = { email, password, onResult ->
-                    authViewModel.login(email, password, onResult)
-                }
-            )
-        }
-        !authState.hasLanguageSelected -> {
-            LanguageSelectorScreen(
-                onLanguageSelected = { code ->
-                    authViewModel.selectLanguage(code)
-                }
-            )
-        }
-        else -> {
-            AppShell(
-                isOffline = false,
-                lastSyncTime = null,
-                roleBadge = authState.role
-            )
+            !authState.hasRoleSelected || !authState.hasLanguageSelected -> {
+                RoleSelectorScreen(
+                    darkTheme = darkTheme,
+                    selectedLangCode = authState.languageCode,
+                    onDarkThemeChange = appViewModel::setDarkTheme,
+                    onLanguageSelected = authViewModel::selectLanguage,
+                    onSelectRole = authViewModel::setUserRole
+                )
+            }
+            !authState.isLoggedIn -> {
+                LoginScreen(
+                    darkTheme = darkTheme,
+                    selectedLangCode = authState.languageCode,
+                    onDarkThemeChange = appViewModel::setDarkTheme,
+                    onLoginSuccess = { },
+                    onLogin = { email, password, onResult ->
+                        authViewModel.login(email, password, onResult)
+                    },
+                    onBackToRoleSelection = authViewModel::clearUserRole,
+                    onSettingsClick = { }
+                )
+            }
+            else -> {
+                AppShell(
+                    isOffline = false,
+                    lastSyncTime = null,
+                    selectedLangCode = authState.languageCode,
+                    roleBadge = if (authState.role == "patient") "Patient" else "Healthcare Worker",
+                    userRole = authState.role,
+                    onLogout = authViewModel::logout
+                )
+            }
         }
     }
 }

@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -23,6 +24,7 @@ class UserPreferences @Inject constructor(
     private val authTokenKey = stringPreferencesKey("auth_token")
     private val selectedLanguageKey = stringPreferencesKey("selected_language")
     private val userRoleKey = stringPreferencesKey("user_role")
+    private val darkThemeKey = booleanPreferencesKey("dark_theme")
 
     val authToken: Flow<String?> = context.dataStore.data
         .catch { _ -> emit(emptyPreferences()) }
@@ -35,6 +37,10 @@ class UserPreferences @Inject constructor(
     val userRole: Flow<String?> = context.dataStore.data
         .catch { _ -> emit(emptyPreferences()) }
         .map { prefs -> prefs[userRoleKey] }
+
+    val darkTheme: Flow<Boolean> = context.dataStore.data
+        .catch { _ -> emit(emptyPreferences()) }
+        .map { prefs -> prefs[darkThemeKey] ?: false }
 
     suspend fun setAuthToken(token: String?) {
         context.dataStore.edit { prefs ->
@@ -52,6 +58,18 @@ class UserPreferences @Inject constructor(
     suspend fun setUserRole(role: String) {
         context.dataStore.edit { prefs ->
             prefs[userRoleKey] = role
+        }
+    }
+
+    suspend fun clearUserRole() {
+        context.dataStore.edit { prefs ->
+            prefs.remove(userRoleKey)
+        }
+    }
+
+    suspend fun setDarkTheme(dark: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[darkThemeKey] = dark
         }
     }
 

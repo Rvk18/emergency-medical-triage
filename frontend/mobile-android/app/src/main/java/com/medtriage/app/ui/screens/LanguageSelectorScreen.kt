@@ -3,7 +3,9 @@ package com.medtriage.app.ui.screens
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -12,7 +14,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import com.medtriage.app.ui.theme.Spacing
 
 val SUPPORTED_LANGUAGES = listOf(
@@ -33,16 +34,23 @@ fun LanguageSelectorScreen(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(Spacing.space24)
+            .padding(Spacing.screenHorizontal)
             .verticalScroll(rememberScrollState())
     ) {
+        Spacer(modifier = Modifier.height(Spacing.space24))
         Text(
             text = "Select language",
             style = MaterialTheme.typography.headlineMedium,
-            modifier = Modifier.padding(bottom = Spacing.space24)
+            color = MaterialTheme.colorScheme.primary
+        )
+        Text(
+            text = "Choose your preferred language for the app",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = Spacing.space8, bottom = Spacing.sectionGap)
         )
         Column(
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(Spacing.space12)
         ) {
             SUPPORTED_LANGUAGES.forEach { (code, name) ->
                 FilterChip(

@@ -12,10 +12,20 @@ val MedTriageTypography = Typography(
         fontWeight = FontWeight.Normal,
         fontSize = 32.sp
     ),
+    headlineLarge = TextStyle(
+        fontFamily = FontFamily.Default,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 28.sp
+    ),
     headlineMedium = TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.SemiBold,
         fontSize = 24.sp
+    ),
+    headlineSmall = TextStyle(
+        fontFamily = FontFamily.Default,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 20.sp
     ),
     titleLarge = TextStyle(
         fontFamily = FontFamily.Default,
@@ -26,6 +36,11 @@ val MedTriageTypography = Typography(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Medium,
         fontSize = 18.sp
+    ),
+    titleSmall = TextStyle(
+        fontFamily = FontFamily.Default,
+        fontWeight = FontWeight.Medium,
+        fontSize = 16.sp
     ),
     bodyLarge = TextStyle(
         fontFamily = FontFamily.Default,
@@ -51,5 +66,10 @@ val MedTriageTypography = Typography(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Medium,
         fontSize = 12.sp
+    ),
+    labelSmall = TextStyle(
+        fontFamily = FontFamily.Default,
+        fontWeight = FontWeight.Medium,
+        fontSize = 11.sp
     )
 )

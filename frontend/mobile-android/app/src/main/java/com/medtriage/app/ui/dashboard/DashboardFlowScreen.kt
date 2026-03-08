@@ -13,6 +13,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardFlowScreen(
+    selectedLangCode: String = "en",
     viewModel: DashboardViewModel = hiltViewModel(),
     onNavigateToTriage: () -> Unit,
     onNavigateToHospitals: () -> Unit
@@ -29,6 +30,7 @@ fun DashboardFlowScreen(
             else -> RmpDashboardScreen(
                 profile = state.profile,
                 loading = state.profileLoading,
+                selectedLangCode = selectedLangCode,
                 onStartTriage = onNavigateToTriage,
                 onShowLearning = { viewModel.showLearning() }
             )

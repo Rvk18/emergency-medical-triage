@@ -7,6 +7,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 
 @Composable
 fun HospitalsFlowScreen(
+    selectedLangCode: String = "en",
     viewModel: HospitalsViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
@@ -16,6 +17,7 @@ fun HospitalsFlowScreen(
         state.selectedHospital != null -> NavigationScreen(
             hospital = state.selectedHospital!!,
             steps = state.routeSteps,
+            routeResult = state.routeResult,
             onGenerateHandoff = viewModel::showHandoffReport,
             onChangeHospital = viewModel::changeHospital
         )

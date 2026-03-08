@@ -1,0 +1,11 @@
+/* Main Stylesheet - Emergency Medical Triage */
+
+/* Design System - Import before Tailwind */
+@import './styles/tokens.css';
+@import './styles/global.css';
+@import './styles/components.css';
+
+/* Tailwind Base */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

@@ -6,9 +6,11 @@ import com.medtriage.app.data.triage.PatientInfo
 import com.medtriage.app.data.triage.SeverityLevel
 import com.medtriage.app.data.triage.SymptomInput
 import com.medtriage.app.data.triage.TriageRepository
+import com.medtriage.app.data.triage.TriageSessionHolder
 import com.medtriage.app.data.triage.TriageResult
 import com.medtriage.app.data.triage.VitalsInput
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.util.UUID
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -23,13 +25,15 @@ data class TriageWizardState(
     val symptoms: SymptomInput = SymptomInput(),
     val vitals: VitalsInput = VitalsInput(),
     val result: TriageResult? = null,
+    val sessionId: String? = null,
     val isAssessing: Boolean = false,
     val assessError: String? = null
 )
 
 @HiltViewModel
 class TriageViewModel @Inject constructor(
-    private val triageRepository: TriageRepository
+    private val triageRepository: TriageRepository,
+    private val triageSessionHolder: TriageSessionHolder
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(TriageWizardState())
@@ -59,7 +63,11 @@ class TriageViewModel @Inject constructor(
     }
 
     fun goToStep(step: Int) {
-        _state.update { it.copy(currentStep = step.coerceIn(0, 5)) }
+        _state.update {
+            val nextStep = step.coerceIn(0, 5)
+            val newSessionId = if (nextStep == 1 && it.sessionId.isNullOrBlank()) UUID.randomUUID().toString() else it.sessionId
+            it.copy(currentStep = nextStep, sessionId = newSessionId)
+        }
     }
 
     fun runAssessment() {
@@ -68,7 +76,8 @@ class TriageViewModel @Inject constructor(
             triageRepository.assess(
                 _state.value.patientInfo,
                 _state.value.symptoms,
-                _state.value.vitals
+                _state.value.vitals,
+                _state.value.sessionId
             ).catch { e ->
                 _state.update {
                     it.copy(isAssessing = false, assessError = e.message)
@@ -81,6 +90,7 @@ class TriageViewModel @Inject constructor(
                                 isAssessing = false,
                                 currentStep = 4,
                                 result = triageResult,
+                                sessionId = triageResult.sessionId ?: it.sessionId,
                                 assessError = null
                             )
                         }
@@ -97,5 +107,10 @@ class TriageViewModel @Inject constructor(
 
     fun resetWizard() {
         _state.value = TriageWizardState()
+    }
+
+    /** Call before navigating to Hospitals tab so POST /hospitals can use severity, recommendations, session_id. */
+    fun saveResultForHospitals() {
+        _state.value.result?.let { triageSessionHolder.setFromResult(it) }
     }
 }

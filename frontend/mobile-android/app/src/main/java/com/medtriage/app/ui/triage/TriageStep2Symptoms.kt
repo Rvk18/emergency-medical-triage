@@ -16,13 +16,18 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.medtriage.app.data.triage.SymptomInput
+import com.medtriage.app.ui.components.TriageStepBar
 import com.medtriage.app.ui.theme.Spacing
+
+import com.medtriage.app.ui.utils.Translator
 
 @Composable
 fun TriageStep2Symptoms(
     symptoms: SymptomInput,
+    selectedLangCode: String = "en",
     onUpdate: (SymptomInput) -> Unit,
-    onNext: () -> Unit
+    onNext: () -> Unit,
+    onBack: () -> Unit
 ) {
     var freeText by mutableStateOf(symptoms.freeText)
     var duration by mutableStateOf(symptoms.durationMinutes?.toString() ?: "")
@@ -31,33 +36,36 @@ fun TriageStep2Symptoms(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(Spacing.space16)
+            .padding(horizontal = Spacing.screenHorizontal)
             .verticalScroll(rememberScrollState())
     ) {
-        Text("Step 2 of 4 — Symptoms", style = androidx.compose.material3.MaterialTheme.typography.titleMedium)
-        Spacer(Modifier.height(Spacing.space16))
+        TriageStepBar(stepIndicator = "${Translator.t("Step", selectedLangCode)} 2 ${Translator.t("of", selectedLangCode)} 4", onBack = onBack)
+        Spacer(Modifier.height(Spacing.space8))
+        Text(Translator.t("Symptoms", selectedLangCode), style = androidx.compose.material3.MaterialTheme.typography.headlineSmall)
+        Spacer(Modifier.height(Spacing.sectionGap))
         OutlinedTextField(
             value = freeText,
             onValueChange = { freeText = it; onUpdate(symptoms.copy(freeText = it)) },
-            label = { Text("Describe symptoms") },
+            label = { Text(Translator.t("Describe symptoms *", selectedLangCode)) },
             modifier = Modifier.fillMaxWidth(),
+            isError = freeText.isBlank(),
             minLines = 3
         )
         Spacer(Modifier.height(Spacing.space8))
         OutlinedTextField(
             value = duration,
             onValueChange = { duration = it; onUpdate(symptoms.copy(durationMinutes = it.toIntOrNull())) },
-            label = { Text("Duration (minutes)") },
+            label = { Text(Translator.t("Duration (minutes)", selectedLangCode)) },
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(Modifier.height(Spacing.space8))
         OutlinedTextField(
             value = severity,
             onValueChange = { severity = it; onUpdate(symptoms.copy(patientReportedSeverity = it.ifBlank { null })) },
-            label = { Text("Patient-reported severity") },
+            label = { Text(Translator.t("Patient-reported severity", selectedLangCode)) },
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(Modifier.height(Spacing.space24))
-        Button(onClick = onNext, modifier = Modifier.fillMaxWidth()) { Text("Next") }
+        Button(onClick = onNext, modifier = Modifier.fillMaxWidth()) { Text(Translator.t("Next", selectedLangCode)) }
     }
 }

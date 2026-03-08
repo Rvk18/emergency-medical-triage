@@ -21,16 +21,17 @@ class TriageRepository @Inject constructor(
     fun assess(
         patientInfo: PatientInfo,
         symptoms: SymptomInput,
-        vitals: VitalsInput
+        vitals: VitalsInput,
+        sessionId: String? = null
     ): Flow<Result<TriageResult>> = flow {
-        val requestDto = toRequestDto(patientInfo, symptoms, vitals)
+        val requestDto = toRequestDto(patientInfo, symptoms, vitals, sessionId)
         if (requestDto.symptoms.isEmpty()) {
             emit(Result.failure(IllegalArgumentException("At least one symptom is required")))
             return@flow
         }
         try {
             val responseDto = triageApi.assess(requestDto)
-            emit(Result.success(toTriageResult(responseDto)))
+            emit(Result.success(toTriageResult(responseDto, sessionId)))
         } catch (e: IOException) {
             emit(Result.failure(IOException("Network error: ${e.message}", e)))
         } catch (e: retrofit2.HttpException) {
@@ -44,7 +45,8 @@ class TriageRepository @Inject constructor(
     private fun toRequestDto(
         patientInfo: PatientInfo,
         symptoms: SymptomInput,
-        vitals: VitalsInput
+        vitals: VitalsInput,
+        sessionId: String?
     ): TriageRequestDto {
         val symptomList = buildList {
             addAll(symptoms.primarySymptoms)
@@ -63,11 +65,12 @@ class TriageRepository @Inject constructor(
             symptoms = symptomList,
             vitals = vitalsMap,
             age_years = patientInfo.age,
-            sex = patientInfo.gender
+            sex = patientInfo.gender,
+            session_id = sessionId?.takeIf { it.length >= 33 }
         )
     }
 
-    private fun toTriageResult(dto: TriageResponseDto): TriageResult {
+    private fun toTriageResult(dto: TriageResponseDto, fallbackSessionId: String? = null): TriageResult {
         val severity = when (dto.severity.lowercase()) {
             "critical" -> SeverityLevel.CRITICAL
             "high" -> SeverityLevel.HIGH
@@ -76,12 +79,13 @@ class TriageRepository @Inject constructor(
             else -> SeverityLevel.MEDIUM
         }
         return TriageResult(
-            emergencyId = "tri_${System.currentTimeMillis()}",
+            emergencyId = dto.id ?: "tri_${System.currentTimeMillis()}",
             severity = severity,
             confidencePercent = (dto.confidence * 100).toInt().coerceIn(0, 100),
             recommendedActions = dto.recommendations,
             safetyDisclaimers = listOfNotNull(dto.safety_disclaimer),
-            flaggedForReview = dto.force_high_priority
+            flaggedForReview = dto.force_high_priority,
+            sessionId = dto.session_id ?: fallbackSessionId
         )
     }
 }

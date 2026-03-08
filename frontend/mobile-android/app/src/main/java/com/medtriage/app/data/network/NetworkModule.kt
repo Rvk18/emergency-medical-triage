@@ -15,10 +15,13 @@ import java.util.concurrent.TimeUnit
 object NetworkModule {
 
     @Provides
-    fun provideOkHttpClient(): OkHttpClient = OkHttpClient.Builder()
+    fun provideOkHttpClient(
+        authInterceptor: AuthInterceptor
+    ): OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
         .writeTimeout(30, TimeUnit.SECONDS)
+        .addInterceptor(authInterceptor)
         .addInterceptor(
             HttpLoggingInterceptor().apply {
                 level = HttpLoggingInterceptor.Level.BODY
@@ -35,6 +38,15 @@ object NetworkModule {
 
     @Provides
     fun provideTriageApi(retrofit: Retrofit): TriageApi = retrofit.create(TriageApi::class.java)
+
+    @Provides
+    fun provideHealthApi(retrofit: Retrofit): HealthApi = retrofit.create(HealthApi::class.java)
+
+    @Provides
+    fun provideHospitalsApi(retrofit: Retrofit): HospitalsApi = retrofit.create(HospitalsApi::class.java)
+
+    @Provides
+    fun provideRouteApi(retrofit: Retrofit): RouteApi = retrofit.create(RouteApi::class.java)
 
     private fun String.ensureTrailingSlash(): String = if (endsWith("/")) this else "$this/"
 }
