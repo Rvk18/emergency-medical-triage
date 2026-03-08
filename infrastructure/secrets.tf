@@ -42,11 +42,12 @@ resource "aws_secretsmanager_secret_version" "rds_config" {
 }
 
 # Eka Care API (for Eka MCP - Indian drugs, treatment protocols)
-# Set eka_api_key in terraform.tfvars or via -var="eka_api_key=..."
+# Eka requires Client ID + Client Secret; call POST /connect-auth/v1/account/login to get access_token, then use as Bearer.
+# Set eka_api_key (Client ID) and eka_client_secret in terraform.tfvars.
 resource "aws_secretsmanager_secret" "eka_config" {
   count       = var.eka_api_key != "" ? 1 : 0
   name        = "${local.name_prefix}/eka-config"
-  description = "Eka Care API credentials for MCP (drugs, treatment protocols)"
+  description = "Eka Care API credentials for MCP (client_id, client_secret for login)"
 
   tags = {
     Name    = "${local.name_prefix}-eka-config"
@@ -58,8 +59,9 @@ resource "aws_secretsmanager_secret_version" "eka_config" {
   count     = var.eka_api_key != "" ? 1 : 0
   secret_id = aws_secretsmanager_secret.eka_config[0].id
   secret_string = jsonencode({
-    api_key  = var.eka_api_key
-    client_id = var.eka_api_key
+    api_key       = var.eka_api_key
+    client_id     = var.eka_api_key
+    client_secret = var.eka_client_secret
   })
 }
 
@@ -143,5 +145,8 @@ resource "aws_secretsmanager_secret_version" "api_config" {
     bedrock_config_secret_name       = aws_secretsmanager_secret.bedrock_config.name
     rds_config_secret_name           = aws_secretsmanager_secret.rds_config.name
     eka_config_secret_name           = var.eka_api_key != "" ? aws_secretsmanager_secret.eka_config[0].name : ""
+    agent_runtime_arn                = var.use_agentcore ? var.agent_runtime_arn : ""
+    triage_agent_runtime_arn         = var.use_agentcore_triage ? var.triage_agent_runtime_arn : ""
+    routing_agent_runtime_arn        = var.routing_agent_runtime_arn != "" ? var.routing_agent_runtime_arn : ""
   })
 }

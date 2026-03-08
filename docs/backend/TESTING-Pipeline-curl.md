@@ -165,3 +165,4 @@ curl -s -X POST "${BASE}/route" -H "Content-Type: application/json" -H "Authoriz
 | **403 Forbidden** | Token present but authorizer rejected (e.g. wrong User Pool). Check Cognito config. |
 | **Route returns stub / null** | Google Maps API key not set or Maps Lambda not configured. See [GOOGLE-MAPS-ACCOUNT-SETUP.md](../infrastructure/GOOGLE-MAPS-ACCOUNT-SETUP.md). |
 | **Hospitals without distance** | Hospital Matcher may not be calling Routing agent; ensure Gateway env vars are set on the Hospital Matcher runtime and `routing-target___get_route` is registered. |
+| **Hospitals show stub-1, stub-2, no directions_url** | The Hospital Matcher **AgentCore runtime** does not have Gateway env vars set, so it uses in-agent synthetic data (no lat/lon) and get_route returns stub. Run `python3 scripts/enable_gateway_on_hospital_matcher_runtime.py` from project root (see [agentcore-gateway-manual-steps.md](./agentcore-gateway-manual-steps.md) Step 4b). |

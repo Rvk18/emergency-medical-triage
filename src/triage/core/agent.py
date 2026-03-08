@@ -15,7 +15,7 @@ import uuid
 
 import boto3
 
-from triage.core.instructions import TRIAGE_SYSTEM_PROMPT
+from triage.core.instructions import TRIAGE_SYSTEM_PROMPT, TRIAGE_SYSTEM_PROMPT_WITH_EKA
 from triage.core.tools import get_triage_tool_config, get_triage_tool_config_with_eka
 from triage.models.triage import TriageRequest, TriageResult
 
@@ -218,9 +218,25 @@ def _assess_via_converse(request: TriageRequest) -> TriageResult:
     """
     from triage.core.gateway_client import is_gateway_configured, search_medications, search_protocols
 
+    gateway_ok = is_gateway_configured()
+    tool_config = get_triage_tool_config_with_eka()
+    num_tools = len(tool_config.get("tools", []))
+    system_prompt = TRIAGE_SYSTEM_PROMPT_WITH_EKA if gateway_ok else TRIAGE_SYSTEM_PROMPT
+
+    logger.info(
+        "Triage Converse: gateway_configured=%s tool_count=%d system_prompt=%s",
+        gateway_ok,
+        num_tools,
+        "with_eka" if gateway_ok else "base",
+    )
+    if not gateway_ok:
+        logger.warning(
+            "Eka tools disabled: Gateway not configured. Ensure GATEWAY_CONFIG_SECRET_NAME is set on this Lambda and "
+            "the gateway-config secret (from setup_agentcore_gateway.py) contains gateway_url and client_info."
+        )
+
     model_id = os.environ.get("BEDROCK_MODEL_ID", "us.anthropic.claude-3-5-sonnet-v2:0")
     client = boto3.client("bedrock-runtime", region_name=REGION)
-    tool_config = get_triage_tool_config_with_eka()
     user_prompt = _build_user_prompt(request)
 
     messages = [
@@ -232,7 +248,7 @@ def _assess_via_converse(request: TriageRequest) -> TriageResult:
             response = client.converse(
                 modelId=model_id,
                 messages=messages,
-                system=[{"text": TRIAGE_SYSTEM_PROMPT}],
+                system=[{"text": system_prompt}],
                 toolConfig=tool_config,
                 inferenceConfig={"maxTokens": 1024},
             )
@@ -260,6 +276,7 @@ def _assess_via_converse(request: TriageRequest) -> TriageResult:
                         tool_results.append({"toolUseId": tool_id, "text": "Invalid tool input."})
                     elif name == "search_indian_medications" and is_gateway_configured():
                         try:
+                            logger.info("Triage calling Eka: search_indian_medications")
                             out = search_medications(
                                 drug_name=tool_input.get("drug_name"),
                                 form=tool_input.get("form"),
@@ -271,6 +288,7 @@ def _assess_via_converse(request: TriageRequest) -> TriageResult:
                         tool_results.append({"toolUseId": tool_id, "text": text})
                     elif name == "search_treatment_protocols" and is_gateway_configured():
                         try:
+                            logger.info("Triage calling Eka: search_treatment_protocols")
                             out = search_protocols(queries=tool_input.get("queries", []))
                             text = json.dumps(out.get("protocols", out), indent=2)
                         except Exception as e:

@@ -1,7 +1,7 @@
 # API integration guide – mobile app & web app
 
-**Audience:** Mobile (Android/iOS) and web frontend teams.  
-**Purpose:** How to call the backend APIs with the latest changes: **RMP auth**, **triage → hospitals → route** pipeline, and **real directions** (POST /route).
+**Audience:** Mobile (Android/iOS) and web frontend teams, hackathon evaluators.  
+**Purpose:** How to call the backend APIs: **RMP auth**, **triage → hospitals → route** pipeline, **real directions** (POST /route), and **Eka triage** (Indian medications and treatment protocols in recommendations).
 
 ---
 
@@ -9,7 +9,7 @@
 
 | Item | Value |
 |------|--------|
-| **Base URL** | `https://vrxlwtzfff.execute-api.us-east-1.amazonaws.com/dev` (get current from backend/Terraform: `terraform output -raw api_gateway_url`) |
+| **Base URL** | From **Secrets Manager** after Terraform apply: run `eval $(python3 scripts/load_api_config.py --exports)` from project root – sets `API_URL`. Or: `cd infrastructure && terraform output -raw api_gateway_url` (e.g. `https://xxxx.execute-api.us-east-1.amazonaws.com/dev/`). |
 | **Auth** | All POST endpoints except health require **Cognito Id Token**. Send header: `Authorization: Bearer <IdToken>`. |
 | **Sign-in** | Use [RMP-AUTH.md](./RMP-AUTH.md) for Amplify / Cognito setup. Backend provides **User Pool ID** and **Client ID** (from Terraform). |
 
@@ -25,6 +25,9 @@ Without a valid token, **POST /triage**, **POST /hospitals**, and **POST /route*
 | **/triage** | POST | Yes | Submit symptoms/vitals; get severity, recommendations, `session_id`. |
 | **/hospitals** | POST | Yes | Get hospital recommendations for a severity; optional patient location for distance. |
 | **/route** | POST | Yes | Get **real driving directions** between origin and destination (distance, duration, Google Maps URL). |
+| **/rmp/learning** | POST | Yes | **RMP Learning:** get quiz question or submit answer for scoring (points 0–10). **Frontend team** implements the Learning screen; see [RMP-LEARNING-API.md](./RMP-LEARNING-API.md) for instructions and contract. |
+| **/rmp/learning/me** | GET | Yes | **RMP Learning:** current user's total points and rank. |
+| **/rmp/learning/leaderboard** | GET | Yes | **RMP Learning:** top N by points; optional `?limit=20`. |
 
 ---
 
@@ -42,6 +45,8 @@ Without a valid token, **POST /triage**, **POST /hospitals**, and **POST /route*
 - **Headers:** `Content-Type: application/json`, `Authorization: Bearer <IdToken>`
 - **Body:** See [triage-api-contract.md](./triage-api-contract.md). Minimum: `symptoms` (array of strings). Optional: `vitals`, `age_years`, `sex`, `session_id`, `patient_id`.
 - **Response:** `200` with `severity`, `confidence`, `recommendations`, `force_high_priority`, `safety_disclaimer`, **`session_id`** (reuse for /hospitals and /route), `id` (when persisted).
+
+**Eka (Indian drugs & protocols):** When the user’s symptoms or free text ask for **Indian drug brands** (e.g. “patient wants Indian paracetamol brands”) or **treatment protocols** (e.g. “fever protocol”, “ORS and dehydration protocol”), the triage AI may call Eka Care via the Gateway. In that case **recommendations** can include specific Indian brand names (e.g. Modi Lifecare, Lyka Labs, Alkem) and/or protocol-style steps (e.g. WHO dehydration classification, zinc supplementation). Frontend can display `recommendations` as-is; no extra fields.
 
 **Example request (mobile/web):**
 
@@ -159,5 +164,9 @@ Always send `Authorization: Bearer <IdToken>` for POST /triage, /hospitals, /rou
 | Doc | Purpose |
 |-----|--------|
 | [RMP-AUTH.md](./RMP-AUTH.md) | Cognito sign-in, Amplify/Cognito SDK, getting Id Token |
-| [triage-api-contract.md](./triage-api-contract.md) | Full triage request/response, session_id, mobile mapping |
+| [triage-api-contract.md](./triage-api-contract.md) | Full triage request/response, session_id, Eka behavior, mobile mapping |
+| [Hospital-Matcher-API.md](./Hospital-Matcher-API.md) | **POST /hospitals** contract – request/response, patient location, directions_url per hospital |
+| [Route-API.md](./Route-API.md) | **POST /route** contract – origin/destination, distance_km, duration_minutes, directions_url |
+| [openapi.yaml](../openapi.yaml) | **Full Swagger/OpenAPI 3.0** – all endpoints, schemas, auth; use for codegen or Swagger UI |
 | [TESTING-Pipeline-curl.md](../backend/TESTING-Pipeline-curl.md) | Curl examples for the full pipeline (backend/testing) |
+| [TESTING-Gateway-Eka.md](../backend/TESTING-Gateway-Eka.md) | Eka triage test cases (medications, protocols) for demo/QA |

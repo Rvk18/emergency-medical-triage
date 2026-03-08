@@ -102,7 +102,19 @@ def call_gateway_tool(tool_name: str, arguments: dict[str, Any]) -> dict[str, An
     if "error" in result:
         raise RuntimeError(f"Gateway tool error: {result['error']}")
 
-    return result.get("result") or {}
+    raw = result.get("result") or {}
+    # Unwrap MCP result: Gateway returns { isError, content: [ { type: "text", text: "<json>" } ] }
+    content = raw.get("content") or []
+    if isinstance(content, list) and len(content) > 0:
+        first = content[0]
+        if isinstance(first, dict) and first.get("type") == "text":
+            text = first.get("text")
+            if isinstance(text, str) and text.strip():
+                try:
+                    return json.loads(text)
+                except json.JSONDecodeError:
+                    pass
+    return raw
 
 
 def get_hospitals_via_gateway(severity: str, limit: int = 3) -> dict[str, Any]:
@@ -118,6 +130,35 @@ def get_hospitals_via_gateway(severity: str, limit: int = 3) -> dict[str, Any]:
 # Eka tools (for Triage agent; same Gateway, eka-target)
 EKA_SEARCH_MEDICATIONS = "eka-target___search_medications"
 EKA_SEARCH_PROTOCOLS = "eka-target___search_protocols"
+EKA_GET_PROTOCOL_PUBLISHERS = "eka-target___get_protocol_publishers"
+EKA_SEARCH_PHARMACOLOGY = "eka-target___search_pharmacology"
+
+
+def get_protocol_publishers_via_gateway() -> dict[str, Any]:
+    """Call Gateway Eka get_protocol_publishers. Returns {publishers: [...]} or stub."""
+    try:
+        return call_gateway_tool(EKA_GET_PROTOCOL_PUBLISHERS, {})
+    except Exception as e:
+        logger.warning("Eka get_protocol_publishers failed: %s", e)
+        return {"publishers": ["ICMR", "RSSDI"], "error": str(e)}
+
+
+def search_pharmacology_via_gateway(
+    query: str | None = None,
+    category: str | None = None,
+    limit: int = 10,
+) -> dict[str, Any]:
+    """Call Gateway Eka search_pharmacology. Returns {results: [...]} or stub."""
+    args: dict[str, Any] = {"limit": limit}
+    if query:
+        args["query"] = query
+    if category:
+        args["category"] = category
+    try:
+        return call_gateway_tool(EKA_SEARCH_PHARMACOLOGY, args)
+    except Exception as e:
+        logger.warning("Eka search_pharmacology failed: %s", e)
+        return {"results": [], "error": str(e)}
 
 
 def search_medications_via_gateway(

@@ -62,18 +62,15 @@ Keep this terminal open. The tunnel forwards local port 5432 to Aurora.
 
 ---
 
-## 5. Run RDS test (in another terminal)
+## 5. Run RDS test or migrations (in another terminal)
 
-Override the RDS config to use localhost:
+Override the RDS config to use localhost (tunnel):
 
 ```bash
-# Create a temporary config that points to localhost (tunnel)
-export RDS_CONFIG_OVERRIDE='{"host":"127.0.0.1","port":5432,"database":"triagedb","username":"triagemaster","region":"us-east-1"}'
+# For migrations, use the script (IAM auth + SSL). Tunnel must be running.
+RDS_HOST_OVERRIDE=127.0.0.1 python3 scripts/run_rmp_learning_migration.py
+# See: docs/backend/AURORA-MIGRATIONS-RUNBOOK.md and infrastructure/migrations/README.md
 ```
-
-The test reads from Secrets Manager by default. To use the tunnel, you need the test to connect to 127.0.0.1. The easiest way: run the test with the tunnel active — but the test fetches host from Secrets Manager (the real Aurora endpoint). So we need to either:
-- Add support in the test for `RDS_HOST_OVERRIDE=127.0.0.1`, or
-- Use psql directly.
 
 **Option A – Use psql (password auth):**
 ```bash
@@ -108,4 +105,4 @@ GRANT rds_iam TO triagemaster;
 | 2. Add to tfvars | `enable_bastion`, `bastion_ssh_public_key`, `bastion_allowed_cidr` |
 | 3. Apply | `terraform apply` |
 | 4. Tunnel | `ssh -i ~/.ssh/id_rsa -N -L 5432:AURORA_ENDPOINT:5432 ec2-user@BASTION_IP` |
-| 5. Connect | `psql -h 127.0.0.1 -p 5432 -U triagemaster -d triagedb` or run RDS test |
+| 5. Connect / migrations | `psql -h 127.0.0.1 -p 5432 -U triagemaster -d triagedb` (password), or `RDS_HOST_OVERRIDE=127.0.0.1 python3 scripts/run_rmp_learning_migration.py` for migrations. See [AURORA-MIGRATIONS-RUNBOOK.md](../backend/AURORA-MIGRATIONS-RUNBOOK.md). |

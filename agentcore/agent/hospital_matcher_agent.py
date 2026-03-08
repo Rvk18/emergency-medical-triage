@@ -59,19 +59,66 @@ def get_route_tool(
 
 
 def _build_prompt(payload: dict) -> str:
+    """Build user prompt. G3: safety boundary—hospital matching only."""
     severity = payload.get("severity", "medium")
     recommendations = payload.get("recommendations", [])
     limit = payload.get("limit", 3)
     rec_str = ", ".join(recommendations) if recommendations else "None"
     parts = [
+        "You are a hospital matching assistant. You only match hospitals to triage results. Do not give clinical advice. Do not ask the user for information that is already provided.",
+        "Output only a single JSON object with keys 'hospitals' (array) and 'safety_disclaimer' (string). No other text before or after.",
+        "",
         f"Match hospitals for: severity={severity}, recommendations=[{rec_str}], limit={limit}.",
-        "Call get_synthetic_hospitals_tool, then return the top hospitals as JSON with hospitals and safety_disclaimer.",
+        "Step 1: Call get_synthetic_hospitals_tool(severity=..., limit=...) to get the hospital list.",
+        "Step 2: If patient_location_lat and patient_location_lon are provided below, for each hospital that has lat and lon, call get_route_tool(origin_lat=<patient_lat>, origin_lon=<patient_lon>, dest_lat=hospital.lat, dest_lon=hospital.lon) and add distance_km, duration_minutes, directions_url to that hospital object.",
+        "Step 3: Return the JSON object with hospitals (and safety_disclaimer: 'Hospital availability may change. Confirm with facility before transport.').",
     ]
-    if payload.get("patient_location_lat") is not None and payload.get("patient_location_lon") is not None:
-        parts.append(
-            "Patient location is provided. For each hospital that has lat and lon, call get_route_tool(origin_lat=patient_location_lat, origin_lon=patient_location_lon, dest_lat=hospital.lat, dest_lon=hospital.lon) and add distance_km, duration_minutes, and directions_url to that hospital in your final JSON."
-        )
+    plat = payload.get("patient_location_lat")
+    plon = payload.get("patient_location_lon")
+    if plat is not None and plon is not None:
+        parts.append("")
+        parts.append(f"Patient location (use these as origin for get_route_tool): patient_location_lat={plat}, patient_location_lon={plon}.")
     return "\n".join(parts)
+
+
+def _enrich_hospitals_with_routes(data: dict, payload: dict) -> dict:
+    """When patient location is provided and Gateway is configured, add distance_km, duration_minutes, directions_url to each hospital that has lat/lon and is missing them. Skip if agent already added route info to avoid duplicate Gateway calls (which contribute to API Gateway 29s timeout → 504). Uses only lat/lon from agent response (no second get_hospitals call) to stay under 29s."""
+    plat = payload.get("patient_location_lat")
+    plon = payload.get("patient_location_lon")
+    if plat is None or plon is None or not _is_gateway_configured():
+        return data
+    hospitals = data.get("hospitals") or []
+    if not hospitals:
+        return data
+    # Skip enrichment if agent already added route info for all hospitals (avoids duplicate get_route calls and reduces 504 risk)
+    if all(
+        h.get("directions_url") and h.get("distance_km") is not None
+        for h in hospitals
+    ):
+        return data
+    # Use only lat/lon from agent's hospital objects (from get_hospitals tool result). Do NOT call get_hospitals again here—that extra Gateway call was causing 504 (2× get_hospitals + N× get_route > 29s).
+    enriched = []
+    for h in hospitals:
+        h = dict(h)
+        lat, lon = h.get("lat"), h.get("lon")
+        if lat is not None and lon is not None and (h.get("directions_url") is None or h.get("distance_km") is None):
+            try:
+                route = get_route_via_gateway(
+                    origin_lat=float(plat),
+                    origin_lon=float(plon),
+                    dest_lat=float(lat),
+                    dest_lon=float(lon),
+                )
+                h["distance_km"] = route.get("distance_km")
+                h["duration_minutes"] = route.get("duration_minutes")
+                h["directions_url"] = route.get("directions_url")
+                if route.get("duration_minutes") is not None:
+                    h["estimated_minutes"] = int(round(float(route["duration_minutes"])))
+            except Exception as e:
+                logger.warning("Enrich route for %s failed: %s", h.get("hospital_id"), e)
+        enriched.append(h)
+    data["hospitals"] = enriched
+    return data
 
 
 @app.entrypoint
@@ -114,6 +161,8 @@ def hospital_matcher(payload: dict) -> dict:
                 limit=payload.get("limit", 3),
             )
         if "hospitals" in data:
+            # Enrich with route info when patient location provided and Gateway configured (guarantees directions)
+            data = _enrich_hospitals_with_routes(data, payload)
             return data
         # Fallback if model didn't return expected shape
         return get_synthetic_hospitals(

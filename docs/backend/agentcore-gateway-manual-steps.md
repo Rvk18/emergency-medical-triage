@@ -59,7 +59,7 @@ The script will:
 
 ### Step 4b: Wire Hospital Matcher agent to Gateway (optional)
 
-To have the agent use the Gateway instead of in-agent synthetic data, set these **environment variables on the AgentCore Runtime** (e.g. in AWS Console → Bedrock AgentCore → your runtime). Values come from **Secrets Manager** (gateway-config secret). Easiest: run `eval $(python3 scripts/load_gateway_config.py)` locally, then copy the exported values into the runtime env in the Console:
+To have the agent use the Gateway instead of in-agent synthetic data (and to get **per-hospital distance/directions** when patient location is provided), set these **environment variables on the AgentCore Runtime** for the Hospital Matcher:
 
 - `GATEWAY_MCP_URL` = `gateway_url` from secret
 - `GATEWAY_CLIENT_ID` = `client_info.client_id`
@@ -67,15 +67,31 @@ To have the agent use the Gateway instead of in-agent synthetic data, set these 
 - `GATEWAY_TOKEN_ENDPOINT` = `client_info.token_endpoint`
 - `GATEWAY_SCOPE` = `client_info.scope` or `bedrock-agentcore-gateway`
 
-Do not store these in code; they are in Secrets Manager only. Local `gateway_config.json` contains only non-sensitive fields and a pointer to the secret.
+**Option A – Script (recommended):** From project root, run:
+
+```bash
+python3 scripts/enable_gateway_on_hospital_matcher_runtime.py
+```
+
+This reads the gateway-config secret and `agent_runtime_arn` from `infrastructure/terraform.tfvars` or from the **api_config** secret (Terraform writes it there when you apply). Use `--dry-run` to print without updating. **Normally you don’t need this:** running `python3 scripts/setup_agentcore_gateway.py` (without `--skip-runtime-env`) automatically sets these env vars on the Hospital Matcher runtime when `agent_runtime_arn` is in api_config. Re-run this script only after you redeploy the Hospital Matcher agent (`agentcore deploy`), because deploy can overwrite runtime env.
+
+**Option B – Console:** Get values with `eval $(python3 scripts/load_gateway_config.py)` and add the five variables in AWS Console → Bedrock → AgentCore → Runtimes → your Hospital Matcher runtime → configuration/environment.
+
+After this, POST /hospitals with `patient_location_lat` and `patient_location_lon` can return hospitals with `distance_km`, `duration_minutes`, and `directions_url` (from the Routing agent via Gateway). Without these env vars, the runtime returns synthetic stub hospitals (no lat/lon) and no route info.
 
 ### Step 4c: Wire Triage to Eka (optional)
 
-To let the Triage Converse flow use Eka tools (search_indian_medications, search_treatment_protocols), set the same Gateway env vars on the **Triage Lambda** (e.g. in Console or Terraform):
+**If triage uses Converse (use_agentcore_triage = false):**  
+The Triage Lambda loads Gateway config from the **gateway-config** secret (GATEWAY_CONFIG_SECRET_NAME). Ensure `python3 scripts/setup_agentcore_gateway.py` has been run so the secret contains `gateway_url` and `client_info`. Then POST /triage will use Eka when the model calls search_indian_medications / search_treatment_protocols.
 
-- `GATEWAY_MCP_URL`, `GATEWAY_CLIENT_ID`, `GATEWAY_CLIENT_SECRET`, `GATEWAY_TOKEN_ENDPOINT`, optional `GATEWAY_SCOPE`
+**If triage uses AgentCore (use_agentcore_triage = true):**  
+The Lambda invokes the **AgentCore Runtime** (triage_agent); the Converse path and Lambda gateway_config are not used. To use Eka, set the same Gateway **env vars on the AgentCore Runtime**:
 
-Ensure the Eka target is added to the Gateway (run setup script with `--eka <eka_lambda_arn>`). Then POST /triage will use Eka when the model requests drug or protocol lookups.
+- **Option A – Script (recommended):** From project root, run `python3 scripts/enable_eka_on_runtime.py`. This reads the gateway-config secret and triage_agent_runtime_arn from infrastructure/terraform.tfvars and sets GATEWAY_MCP_URL, GATEWAY_CLIENT_ID, GATEWAY_CLIENT_SECRET, GATEWAY_TOKEN_ENDPOINT, and GATEWAY_SCOPE on the triage runtime. Use --dry-run to print vars without updating. If the script cannot find the ARN, use `--tfvars path/to/infrastructure/terraform.tfvars`. **IAM:** Your user/role needs `bedrock-agentcore:GetAgentRuntime` and `bedrock-agentcore:UpdateAgentRuntime`; if you get AccessDeniedException, add those actions to your IAM policy (see [runtime permissions](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/runtime-permissions.html)).
+
+- **Option B – Console:** Get values with `eval $(python3 scripts/load_gateway_config.py)` and add the five variables in AWS Console → Bedrock → AgentCore → Runtimes → triage runtime → configuration/environment.
+
+Ensure the Eka target is added to the Gateway (setup script with Eka). Then the triage agent on the runtime can call Eka tools.
 
 ## Lambda Handler Format (Reference)
 

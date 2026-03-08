@@ -4,11 +4,15 @@ Setup AgentCore Gateway with get_hospitals tool.
 
 Uses bedrock_agentcore_starter_toolkit GatewayClient to create MCP Gateway with
 Cognito OAuth, adds our Lambda as target with get_hospitals tool schema,
-and saves gateway_config.json.
+and saves gateway_config to Secrets Manager.
+
+By default, also sets Gateway env vars on the Hospital Matcher AgentCore runtime
+(so POST /hospitals uses get_hospitals and get_route without a separate step).
+Use --skip-runtime-env to only configure the Gateway.
 
 Prerequisites:
   - pip install bedrock-agentcore-starter-toolkit boto3
-  - Terraform apply (creates Lambdas and api_config secret)
+  - Terraform apply (creates Lambdas and api_config secret, including agent_runtime_arn when use_agentcore=true)
   - Lambda ARN: from env GATEWAY_GET_HOSPITALS_LAMBDA_ARN, first arg, or api_config secret
 
 Usage:
@@ -95,6 +99,25 @@ EKA_SEARCH_PROTOCOLS_SCHEMA = {
             },
         },
         "required": ["queries"],
+    },
+}
+EKA_GET_PUBLISHERS_SCHEMA = {
+    "name": "get_protocol_publishers",
+    "description": "Get list of protocol publishers (e.g. ICMR, RSSDI). Call before search_protocols to get valid publisher names.",
+    "inputSchema": {"type": "object", "properties": {}},
+}
+EKA_SEARCH_PHARMACOLOGY_SCHEMA = {
+    "name": "search_pharmacology",
+    "description": "Search generic pharmacology (National Formulary of India): dose, indications, contraindications, pregnancy_category, adverse_effects. Use for dosing and safety.",
+    "inputSchema": {
+        "type": "object",
+        "properties": {
+            "query": {"type": "string", "description": "Drug name e.g. Paracetamol or compound e.g. Rifampicin + Isoniazid"},
+            "category": {"type": "string", "description": "Filter by category e.g. Antibiotics, Analgesics"},
+            "limit": {"type": "integer", "description": "Max results (default 10)"},
+            "exact_match": {"type": "boolean", "description": "Only exact matches"},
+            "relevance_threshold": {"type": "integer", "description": "Min relevance score (default 100)"},
+        },
     },
 }
 
@@ -418,7 +441,7 @@ def setup_gateway() -> dict:
                         "lambda": {
                             "lambdaArn": eka_lambda_arn,
                             "toolSchema": {
-                                "inlinePayload": [EKA_SEARCH_MEDICATIONS_SCHEMA, EKA_SEARCH_PROTOCOLS_SCHEMA],
+                                "inlinePayload": [EKA_SEARCH_MEDICATIONS_SCHEMA, EKA_SEARCH_PROTOCOLS_SCHEMA, EKA_GET_PUBLISHERS_SCHEMA, EKA_SEARCH_PHARMACOLOGY_SCHEMA],
                             },
                         }
                     }
@@ -427,7 +450,7 @@ def setup_gateway() -> dict:
                     {"credentialProviderType": "GATEWAY_IAM_ROLE"},
                 ],
             )
-            logger.info("Eka target added. Tool names: %s___search_medications, %s___search_protocols", eka_target_name, eka_target_name)
+            logger.info("Eka target added. Tools: %s___search_medications, search_protocols, get_protocol_publishers, search_pharmacology", eka_target_name)
             try:
                 gw_response = control_client.get_gateway(gatewayIdentifier=gateway_id)
                 role_arn = gw_response.get("roleArn") or gw_response.get("gateway", {}).get("executionRoleArn")
@@ -437,7 +460,45 @@ def setup_gateway() -> dict:
                 logger.warning("Could not add Eka Lambda permission: %s", e)
         except ClientError as e:
             if e.response.get("Error", {}).get("Code") == "ConflictException":
-                logger.info("Eka target already exists")
+                logger.info("Eka target already exists; updating tool schema to include all four tools")
+                try:
+                    paginator = control_client.get_paginator("list_gateway_targets")
+                    for page in paginator.paginate(gatewayIdentifier=gateway_id):
+                        for t in page.get("items", []):
+                            if t.get("name") == eka_target_name:
+                                target_id = t.get("targetId")
+                                if target_id:
+                                    control_client.update_gateway_target(
+                                        gatewayIdentifier=gateway_id,
+                                        targetId=target_id,
+                                        name=eka_target_name,
+                                        description="Eka Care tools: Indian drugs and treatment protocols",
+                                        targetConfiguration={
+                                            "mcp": {
+                                                "lambda": {
+                                                    "lambdaArn": eka_lambda_arn,
+                                                    "toolSchema": {
+                                                        "inlinePayload": [
+                                                            EKA_SEARCH_MEDICATIONS_SCHEMA,
+                                                            EKA_SEARCH_PROTOCOLS_SCHEMA,
+                                                            EKA_GET_PUBLISHERS_SCHEMA,
+                                                            EKA_SEARCH_PHARMACOLOGY_SCHEMA,
+                                                        ],
+                                                    },
+                                                }
+                                            }
+                                        },
+                                        credentialProviderConfigurations=[
+                                            {"credentialProviderType": "GATEWAY_IAM_ROLE"},
+                                        ],
+                                    )
+                                    logger.info("Eka target updated with all four tools: search_medications, search_protocols, get_protocol_publishers, search_pharmacology")
+                                break
+                        else:
+                            continue
+                        break
+                except ClientError as err:
+                    logger.warning("Could not update Eka target schema: %s", err)
             else:
                 raise
 
@@ -621,7 +682,7 @@ def setup_gateway() -> dict:
     print("Gateway ID:", config["gateway_id"])
     print(f"Tool name (MCP): {target_name}___get_hospitals")
     if eka_lambda_arn:
-        print("Eka tools: eka-target___search_medications, eka-target___search_protocols")
+        print("Eka tools: eka-target___search_medications, search_protocols, get_protocol_publishers, search_pharmacology")
     if maps_lambda_arn:
         print("Maps tools: maps-target___get_directions, maps-target___geocode_address")
     if routing_lambda_arn:
@@ -630,7 +691,102 @@ def setup_gateway() -> dict:
     print("Local gateway_config.json has no secrets; use load_gateway_config.py to export env vars.")
     print("=" * 60)
 
+    # Set Gateway env vars on Hospital Matcher runtime by default (so it uses get_hospitals + get_route)
+    if "--skip-runtime-env" not in sys.argv:
+        _set_gateway_env_on_hospital_matcher_runtime(config)
+        _set_gateway_env_on_routing_runtime(config)
+
     return config
+
+
+def _set_gateway_env_on_routing_runtime(gateway_config: dict) -> None:
+    """Set Gateway env vars on the Routing AgentCore runtime so it can call maps-target (Google Maps) for directions_url."""
+    api_cfg = _load_api_config_from_secret()
+    if not api_cfg:
+        return
+    arn = (api_cfg.get("routing_agent_runtime_arn") or "").strip()
+    if not arn:
+        return
+    client_info = gateway_config.get("client_info") or {}
+    if not isinstance(client_info, dict) or not client_info.get("client_id"):
+        return
+    gateway_vars = {
+        "GATEWAY_MCP_URL": (gateway_config.get("gateway_url") or "").strip(),
+        "GATEWAY_CLIENT_ID": (client_info.get("client_id") or "").strip(),
+        "GATEWAY_CLIENT_SECRET": (client_info.get("client_secret") or "").strip(),
+        "GATEWAY_TOKEN_ENDPOINT": (client_info.get("token_endpoint") or "").strip(),
+        "GATEWAY_SCOPE": (client_info.get("scope") or "bedrock-agentcore-gateway").strip() or "bedrock-agentcore-gateway",
+    }
+    if not gateway_vars.get("GATEWAY_MCP_URL"):
+        return
+    runtime_id = arn.split("runtime/")[-1].strip() if "/" in arn else arn
+    try:
+        control = boto3.client("bedrock-agentcore-control", region_name=REGION)
+        current = control.get_agent_runtime(agentRuntimeId=runtime_id)
+        existing = current.get("environmentVariables") or {}
+        merged = {**existing, **gateway_vars}
+        control.update_agent_runtime(
+            agentRuntimeId=runtime_id,
+            agentRuntimeArtifact=current["agentRuntimeArtifact"],
+            networkConfiguration=current["networkConfiguration"],
+            roleArn=current["roleArn"],
+            environmentVariables=merged,
+        )
+        logger.info("Set Gateway env vars on Routing runtime %s (get_directions -> maps-target -> directions_url)", runtime_id)
+        print("Routing runtime configured to use Gateway (maps-target) for directions_url.")
+    except ClientError as e:
+        if e.response["Error"]["Code"] == "AccessDeniedException":
+            logger.warning("No permission to UpdateAgentRuntime for Routing; directions_url may be null until runtime has Gateway env")
+        else:
+            logger.warning("Could not set Gateway env on Routing runtime %s: %s", runtime_id, e)
+    except Exception as e:
+        logger.warning("Could not set Gateway env on Routing runtime: %s", e)
+
+
+def _set_gateway_env_on_hospital_matcher_runtime(gateway_config: dict) -> None:
+    """Set Gateway env vars on the Hospital Matcher AgentCore runtime so it uses Gateway tools by default."""
+    api_cfg = _load_api_config_from_secret()
+    if not api_cfg:
+        return
+    arn = (api_cfg.get("agent_runtime_arn") or "").strip()
+    if not arn:
+        logger.info("api_config has no agent_runtime_arn; skipping Hospital Matcher runtime env (run enable_gateway_on_hospital_matcher_runtime.py if needed)")
+        return
+    client_info = gateway_config.get("client_info") or {}
+    if not isinstance(client_info, dict) or not client_info.get("client_id"):
+        logger.warning("Gateway config has no client_info; cannot set runtime env")
+        return
+    gateway_vars = {
+        "GATEWAY_MCP_URL": (gateway_config.get("gateway_url") or "").strip(),
+        "GATEWAY_CLIENT_ID": (client_info.get("client_id") or "").strip(),
+        "GATEWAY_CLIENT_SECRET": (client_info.get("client_secret") or "").strip(),
+        "GATEWAY_TOKEN_ENDPOINT": (client_info.get("token_endpoint") or "").strip(),
+        "GATEWAY_SCOPE": (client_info.get("scope") or "bedrock-agentcore-gateway").strip() or "bedrock-agentcore-gateway",
+    }
+    if not gateway_vars.get("GATEWAY_MCP_URL"):
+        return
+    runtime_id = arn.split("runtime/")[-1].strip() if "/" in arn else arn
+    try:
+        control = boto3.client("bedrock-agentcore-control", region_name=REGION)
+        current = control.get_agent_runtime(agentRuntimeId=runtime_id)
+        existing = current.get("environmentVariables") or {}
+        merged = {**existing, **gateway_vars}
+        control.update_agent_runtime(
+            agentRuntimeId=runtime_id,
+            agentRuntimeArtifact=current["agentRuntimeArtifact"],
+            networkConfiguration=current["networkConfiguration"],
+            roleArn=current["roleArn"],
+            environmentVariables=merged,
+        )
+        logger.info("Set Gateway env vars on Hospital Matcher runtime %s (get_hospitals + get_route will use Gateway)", runtime_id)
+        print("Hospital Matcher runtime configured to use Gateway (no need to run enable_gateway_on_hospital_matcher_runtime.py).")
+    except ClientError as e:
+        if e.response["Error"]["Code"] == "AccessDeniedException":
+            logger.warning("No permission to UpdateAgentRuntime; run python3 scripts/enable_gateway_on_hospital_matcher_runtime.py after deploy")
+        else:
+            logger.warning("Could not set Gateway env on runtime %s: %s", runtime_id, e)
+    except Exception as e:
+        logger.warning("Could not set Gateway env on Hospital Matcher runtime: %s", e)
 
 
 if __name__ == "__main__":
