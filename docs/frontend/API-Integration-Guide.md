@@ -25,7 +25,7 @@ Without a valid token, **POST /triage**, **POST /hospitals**, and **POST /route*
 | **/triage** | POST | Yes | Submit symptoms/vitals; get severity, recommendations, `session_id`. |
 | **/hospitals** | POST | Yes | Get hospital recommendations for a severity; optional patient location for distance. |
 | **/route** | POST | Yes | Get **real driving directions** between origin and destination (distance, duration, Google Maps URL). |
-| **/rmp/learning** | POST | Yes | **RMP Learning:** get quiz question or submit answer for scoring (points 0–10). See [RMP-LEARNING-API.md](./RMP-LEARNING-API.md). |
+| **/rmp/learning** | POST | Yes | **RMP Learning:** get quiz question or submit answer for scoring (points 0–10). **Frontend team** implements the Learning screen; see [RMP-LEARNING-API.md](./RMP-LEARNING-API.md) for instructions and contract. |
 | **/rmp/learning/me** | GET | Yes | **RMP Learning:** current user's total points and rank. |
 | **/rmp/learning/leaderboard** | GET | Yes | **RMP Learning:** top N by points; optional `?limit=20`. |
 

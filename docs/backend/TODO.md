@@ -11,7 +11,7 @@
 - **Eka on triage runtime:** Done. Script `scripts/enable_eka_on_runtime.py` sets Gateway env vars on the AgentCore triage runtime. Triage recommendations include Indian medications and treatment protocols. Eka validation (E1–E5) and test cases documented; tested and docs updated. See [TESTING-Gateway-Eka.md](./TESTING-Gateway-Eka.md) §4b, [EKA-VALIDATION-RUNBOOK.md](./EKA-VALIDATION-RUNBOOK.md).
 - **Google Maps / POST /route:** Done and tested. Real directions when API key is in Secrets Manager; `distance_km`, `duration_minutes`, `directions_url`. See [GOOGLE-MAPS-ACCOUNT-SETUP.md](../infrastructure/GOOGLE-MAPS-ACCOUNT-SETUP.md).
 - **AC-2 (Triage on AgentCore):** Done. Triage agent in `agentcore/agent/triage_agent.py`; POST /triage invokes AgentCore; observability in [OBSERVABILITY.md](./OBSERVABILITY.md).
-- **AC-3 (Memory + Hospital MCP):** Implemented and tested. Optional `session_id` / `patient_id` on /triage and /hospitals; passed to AgentCore as `runtimeSessionId`. Hospital Matcher uses Gateway get_hospitals. Optional: re-test session continuity (same session_id across triage → hospitals → route).
+- **AC-3 (Memory + Hospital MCP):** Implemented and tested. Optional `session_id` / `patient_id` on /triage and /hospitals; passed to AgentCore as `runtimeSessionId`. **Session continuity is covered by comprehensive curl tests** ([API-TEST-RESULTS.md](./API-TEST-RESULTS.md)); no separate re-test phase.
 - **AC-4 (Routing + Identity):** Routing pipeline and RMP auth done. **Guardrails G1–G3 done:** input validation (triage: symptoms/vitals/age; hospitals: severity enum, limit, lat/lon; route: body, lat/lon, address length), output validation (triage/hospitals/route max lengths and enums), safety prompts (AGENT-PROMPTS.md, prompts updated in instructions and agents). **Policy done:** run `scripts/setup_agentcore_policy.py` after gateway setup. See [AC4-Routing-Identity-Design.md](./AC4-Routing-Identity-Design.md) §4, [AGENT-PROMPTS.md](./AGENT-PROMPTS.md), [POLICY-RUNBOOK.md](./POLICY-RUNBOOK.md).
 - **RMP Learning (Group C backend complete):** Eka quiz (get_question + score_answer), POST /rmp/learning; Aurora rmp_scores/learning_answers (migration 003); points persisted on score_answer; GET /rmp/learning/me, GET /rmp/learning/leaderboard. Frontend contract: [RMP-LEARNING-API.md](../frontend/RMP-LEARNING-API.md). See [NEW-MODULE-RMP-AUGMENTATION.md](./NEW-MODULE-RMP-AUGMENTATION.md) §6, [API-TEST-RESULTS.md](./API-TEST-RESULTS.md) § RMP Learning, [RMP-LEARNING-COMPLETE-RUNBOOK.md](./RMP-LEARNING-COMPLETE-RUNBOOK.md).
 - **Hackathon submission:** Docs updated. [HACKATHON.md](../../HACKATHON.md), [API-Integration-Guide.md](../frontend/API-Integration-Guide.md), [triage-api-contract.md](../frontend/triage-api-contract.md).
@@ -26,10 +26,10 @@
 
 **Next (in order):**
 
-1. **New module — C backend complete.** RMP learning: Eka quiz + POST /rmp/learning (get_question, score_answer with persistence), GET /rmp/learning/me, GET /rmp/learning/leaderboard. Aurora migration 003 (rmp_scores, learning_answers). **Frontend:** Use [RMP-LEARNING-API.md](../frontend/RMP-LEARNING-API.md). Then continue with Group A (Offline) → B (Multi-language) → D (Collective intelligence). See [NEW-MODULE-RMP-AUGMENTATION.md](./NEW-MODULE-RMP-AUGMENTATION.md) §4–6.
-2. **AC-3 re-test** — Same session_id across triage → hospitals → route; verify with curl or frontend. [TESTING-Pipeline-curl.md](./TESTING-Pipeline-curl.md).
-3. **Web app deploy + frontend–backend integration** — Deploy `frontend/web/`, API URL, Cognito, triage → hospitals → route, session_id. [ROADMAP-NEXT.md](../ROADMAP-NEXT.md) § Phase 5.
-4. **Comprehensive E2E testing** — End-to-end testing from **frontend web app** and **mobile app**; confirm full flow (triage → hospitals → route, auth, session_id). Document results and fix issues.
+1. **New module A → B → D (next priority).** Offline & resilience (A), Multi-language & accessibility (B), Collective intelligence (D). See [NEW-MODULE-RMP-AUGMENTATION.md](./NEW-MODULE-RMP-AUGMENTATION.md) §4–6. **RMP Learning (C) backend is complete;** frontend team owns the Learning screen — see [RMP-LEARNING-API.md](../frontend/RMP-LEARNING-API.md) for instructions.
+2. **AC-3 (session_id):** Covered by comprehensive curl tests in [API-TEST-RESULTS.md](./API-TEST-RESULTS.md); no separate re-test phase required.
+3. **Web app deploy + frontend–backend integration** — **Last.** Deploy `frontend/web/`, API URL, Cognito, triage → hospitals → route, session_id. [ROADMAP-NEXT.md](../ROADMAP-NEXT.md) § Phase 5.
+4. **Comprehensive E2E testing** — **Last.** End-to-end from frontend web app and mobile app; document results. [ROADMAP-NEXT.md](../ROADMAP-NEXT.md) § Phase 6.
 
 Full roadmap: [ROADMAP-NEXT.md](../ROADMAP-NEXT.md).
 
@@ -55,7 +55,7 @@ Full roadmap: [ROADMAP-NEXT.md](../ROADMAP-NEXT.md).
 ### Phase 2: AgentCore Phases (AC-2 → AC-3 → AC-4)
 
 4. **AC-2.** Triage on AgentCore + Observability — **Done**
-5. **AC-3.** Memory + Hospital MCP — **Done** (session_id/patient_id; tested; optional re-test)
+5. **AC-3.** Memory + Hospital MCP — **Done.** session_id/patient_id; **covered by comprehensive curl tests**; no separate phase.
 6. **AC-4.** Routing + Identity — **Routing pipeline + Google Maps + RMP auth + Guardrails G1–G3 + Policy done.** Policy: run `python3 scripts/setup_agentcore_policy.py` after gateway setup.
 
 ---

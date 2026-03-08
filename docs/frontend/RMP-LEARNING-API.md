@@ -7,6 +7,23 @@
 
 ---
 
+## Instructions for Frontend team
+
+**Backend is complete.** The Frontend team owns building the **Learning / quiz screen**. Use this document as the API contract.
+
+**Checklist:**
+
+1. **Get question:** Call `POST /rmp/learning` with `{"action":"get_question","topic":"…"}`. Display `question` to the user; store `reference_answer` and `question` for the next step.
+2. **Submit answer:** When the user submits an answer, call `POST /rmp/learning` with `{"action":"score_answer","question":"…","reference_answer":"…","user_answer":"…"}` (use the stored `question` and `reference_answer` from step 1). Show `points` and `feedback` from the response.
+3. **My score:** Call `GET /rmp/learning/me` to show the current RMP’s total points and rank (e.g. “My score” or profile).
+4. **Leaderboard:** Call `GET /rmp/learning/leaderboard?limit=20` to show the top N RMPs by points.
+
+**Auth:** Same as triage/hospitals/route – Cognito Id Token in `Authorization: Bearer <IdToken>`. See [RMP-AUTH.md](./RMP-AUTH.md).
+
+**Suggested topics for get_question:** e.g. `"fever protocol"`, `"diabetes management"`, `"acute diarrhoea"`, or leave topic generic.
+
+---
+
 ## Base URL and auth
 
 - **Base URL:** Same as other APIs. From Terraform / `load_api_config`: `API_URL` (e.g. `https://xxxx.execute-api.us-east-1.amazonaws.com/dev/`). No trailing slash when appending path.
