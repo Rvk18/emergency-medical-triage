@@ -72,6 +72,24 @@ Uses the existing Terraform web bucket and CloudFront so the APK is served at a 
 
 Use the download URL as your **Android APK (download)** link in PROJECT-SUMMARY and submission.
 
+### Option A2: APK on dedicated public S3 bucket
+
+A separate **public-read** S3 bucket is available so anyone can download the APK without CloudFront. Terraform creates it in `infrastructure/apk_bucket.tf`.
+
+1. **Apply Terraform** (if not already): `cd infrastructure && terraform apply`
+2. **Get bucket name:** `terraform -chdir=infrastructure output -raw apk_bucket_name`
+3. **Upload the APK** (you or your team uploads the built APK; key `apk/MedTriage.apk` recommended):
+   ```bash
+   BUCKET=$(terraform -chdir=infrastructure output -raw apk_bucket_name)
+   aws s3 cp path/to/your-app.apk s3://$BUCKET/apk/MedTriage.apk \
+     --content-type "application/vnd.android.package-archive"
+   ```
+   Or upload via **AWS Console**: S3 → bucket → Upload → choose the APK file; create folder `apk` and upload as `apk/MedTriage.apk`.
+   **If you see "Access Denied" when opening the download URL:** the object likely doesn't exist yet — S3 returns 403 for missing objects. Upload the APK to the key `apk/MedTriage.apk` first, then use the URL from step 4.
+4. **Download URL** (after upload):  
+   `terraform -chdir=infrastructure output -raw apk_download_url`  
+   This is a **CloudFront** URL (e.g. `https://d123.cloudfront.net/apk/MedTriage.apk`). Use this link in PROJECT-SUMMARY; no auth required.
+
 ### Option B: APK on Google Drive (simplest)
 
 1. **Build release APK:** From `frontend/mobile-android`: `./gradlew assembleRelease`. APK is in `app/build/outputs/apk/release/`.
@@ -114,5 +132,7 @@ If you can’t distribute the APK in time: in PROJECT-SUMMARY and PPT, write: �
 | Frontend integration | [docs/frontend/API-Integration-Guide.md](frontend/API-Integration-Guide.md) |
 | Web app URL (after deploy) | `terraform -chdir=infrastructure output -raw web_app_url` |
 | Web app bucket | `terraform -chdir=infrastructure output -raw web_app_bucket_name` |
+| APK bucket (public) | `terraform -chdir=infrastructure output -raw apk_bucket_name` |
+| APK download URL (after upload to apk bucket) | `terraform -chdir=infrastructure output -raw apk_download_url` |
 | Android APK URL (Option A: S3) | `https://d2x5u793glu2eu.cloudfront.net/apk/MedTriage.apk` (after uploading APK to bucket) |
 | CORS (API Gateway) | Allow all origins (`*`); see `infrastructure/api_gateway_cors.tf` and [SECURITY-PUBLIC-VS-PRIVATE.md](SECURITY-PUBLIC-VS-PRIVATE.md) |

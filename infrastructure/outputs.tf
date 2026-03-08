@@ -83,3 +83,13 @@ output "web_app_bucket_name" {
   description = "S3 bucket name for web app static files. Upload dist/ with: aws s3 sync dist/ s3://this-bucket --delete"
   value       = aws_s3_bucket.web.id
 }
+
+output "apk_bucket_name" {
+  description = "S3 bucket for public APK download. Upload APK: aws s3 cp app-debug.apk s3://this-bucket/apk/MedTriage.apk --content-type application/vnd.android.package-archive"
+  value       = aws_s3_bucket.apk.id
+}
+
+output "apk_download_url" {
+  description = "APK download URL (CloudFront). Upload to key 'apk/MedTriage.apk' first."
+  value       = "https://${aws_cloudfront_distribution.apk.domain_name}/apk/MedTriage.apk"
+}
