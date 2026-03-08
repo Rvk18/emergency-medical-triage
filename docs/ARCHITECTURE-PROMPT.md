@@ -64,6 +64,10 @@ We **augment RMPs** (not replace them) with:
 | **Data** | Aurora PostgreSQL | Serverless v2, private subnets, IAM auth; triage_assessments, hospital_matches, rmp_scores, learning_answers. |
 | **Auth** | Cognito User Pools | RMP sign-in; Id Token in `Authorization: Bearer <token>`; API Gateway authorizer. |
 | **Config** | Secrets Manager | api_config (API URL, Gateway Lambda ARNs), gateway-config (OAuth client), rds-config, bedrock-config; no hardcoded secrets. |
+| **Observability** | CloudWatch Logs | Structured logs per Lambda (source, duration_ms, request_id); no PHI in log text; CloudWatch Logs Insights for trace and p99. See [OBSERVABILITY.md](backend/OBSERVABILITY.md). |
+| **Policy** | AgentCore Policy (Cedar) | Attached to MCP Gateway via `scripts/setup_agentcore_policy.py`; allowlist of 8 tools (Eka, get_hospitals, get_route, get_directions, geocode_address); default deny. See [POLICY-RUNBOOK.md](backend/POLICY-RUNBOOK.md). |
+| **Guardrails** | G1–G3 | Input validation (symptoms/vitals/age, severity enum, lat/lon); output validation (max lengths, enums); safety prompts in agents (do not prescribe, refusal for off-topic). See [AGENT-PROMPTS.md](backend/AGENT-PROMPTS.md). |
+| **Compliance** | HIPAA H1–H4 | PHI scope documented; encryption at rest (Aurora, S3) and in transit; IAM least privilege, no PHI in logs; audit via request_id, triage_assessments.id, CloudWatch. See [HIPAA-Compliance-Checklist.md](backend/HIPAA-Compliance-Checklist.md). |
 
 ### Data flow (summary)
 
@@ -76,7 +80,9 @@ We **augment RMPs** (not replace them) with:
 
 ## 3. Prompts for Generating Architecture Diagrams
 
-Use the following prompts with an image generator (e.g. DALL·E, Midjourney), diagram tool (draw.io, Lucidchart), or Mermaid renderer to produce diagrams for submission.
+Use the following prompts with an image generator (e.g. DALL·E, Midjourney), diagram tool (draw.io, Lucidchart, PowerPoint), or Mermaid renderer to produce diagrams for submission.
+
+**Naming rules (avoid common mistakes):** Use **RMP** (Rural Medical Practitioner), not HMP. Use **Route** or **Routing** for the directions flow, not "Acute". Use **RMP Learning** and **RMP Quiz** for the quiz/leaderboard feature.
 
 ---
 
@@ -86,17 +92,17 @@ Use the following prompts with an image generator (e.g. DALL·E, Midjourney), di
 
 Create a clean, professional **high-level system architecture diagram** for the following application. Style: simple boxes and arrows, suitable for slides or a one-page overview. Show main layers and value flow only; no code or protocols.
 
-**Application:** Emergency Medical Triage and Hospital Routing System — an AI-powered platform for rural India that helps Rural Medical Practitioners (RMPs) assess emergency severity, get Indian drug and protocol guidance (Eka Care), match patients to hospitals, and get turn-by-turn directions.
+**Application:** Emergency Medical Triage and Hospital Routing System — an AI-powered platform for rural India that helps **Rural Medical Practitioners (RMPs)** assess emergency severity, get Indian drug and protocol guidance (Eka Care), match patients to hospitals, and get turn-by-turn directions.
 
 **Layers to show (left to right or top to bottom):**
 
 1. **Users:** Mobile app (Android), Web dashboard. Label: RMPs / healthcare workers.
-2. **Entry:** Single box — API Gateway (Cognito auth).
-3. **Backend:** One box — Backend services (Lambda): triage, hospital matching, routing, RMP learning.
-4. **AI & integration:** One box — AI (Bedrock AgentCore) and MCP Gateway (Eka, hospitals, maps).
-5. **Data:** One box — Database (Aurora PostgreSQL) and external (Google Maps).
+2. **Entry:** Single box — API Gateway with Cognito auth (label: "Cognito Authorizer" or "Cognito Auth").
+3. **Backend:** One box — Backend services (Lambda): Health, Triage, Hospital Matcher, **Route**, **RMP Learning**. Do not use "Acute" or "HMP"; use "Route" and "RMP Learning".
+4. **AI & integration:** One box — Bedrock AgentCore (four runtimes: Triage, Hospital Matcher, Routing, RMP Quiz) and MCP Gateway (policy-enforced; tools: Eka, get_hospitals, maps).
+5. **Data & external:** One box — Aurora PostgreSQL, Secrets Manager; external: Google Maps, Eka Care Platform.
 
-**Flow:** Users → API Gateway → Backend (Lambda) → AI & Gateway and Database. Backend also talks to Google Maps. Use short labels; no code. The diagram should answer: Where do users land? Where is app logic? Where is AI and data? What is external?
+**Flow:** Users → API Gateway (Cognito) → Backend Lambdas → Bedrock AgentCore → MCP Gateway → tools → Aurora / Google Maps / Eka. Use short labels; no code. The diagram should answer: Where do users land? Where is app logic? Where is AI and data? What is external?
 
 ---
 
@@ -104,27 +110,50 @@ Create a clean, professional **high-level system architecture diagram** for the 
 
 **Copy-paste prompt:**
 
-Create a **detailed technical architecture diagram** for the following system. Style: clear rectangles for components, labeled arrows for data/control flow. Suitable for a technical design doc or submission appendix.
+Create a **detailed technical architecture diagram** for the following system. Style: clear rectangles for components, labeled arrows for data/control flow. Suitable for a technical design doc or submission appendix. **Include an Observability section** (CloudWatch Logs and CloudWatch Metrics) as in item 8 below.
 
-**System:** Emergency Medical Triage and Hospital Routing System (rural India). Augments RMPs with AI triage (Eka: Indian drugs/protocols), hospital matching, routing (Google Maps), and RMP Learning (quiz, leaderboard).
+**System:** Emergency Medical Triage and Hospital Routing System (rural India). Augments **RMPs** (Rural Medical Practitioners) with AI triage (Eka: Indian drugs/protocols), hospital matching, routing (Google Maps), and **RMP Learning** (quiz, leaderboard). **Use exact names:** RMP (not HMP), Route (not Acute), RMP Learning, RMP Quiz.
 
 **Components to include:**
 
 **1. Clients:** Mobile app (Android), Web dashboard. Both use Cognito Id Token for API calls.
 
-**2. API:** API Gateway (REST, regional). Endpoints: GET /health, POST /triage, POST /hospitals, POST /route, POST /rmp/learning, GET /rmp/learning/me, GET /rmp/learning/leaderboard. Cognito authorizer on all except /health.
+**2. API layer:** API Gateway (REST, regional). **Cognito Authorizer** connected to API Gateway. Endpoints: GET /health, POST /triage, POST /hospitals, POST /route, POST /rmp/learning, GET /rmp/learning/me, GET /rmp/learning/leaderboard. Cognito authorizer on all except /health.
 
-**3. Backend (Lambda):** Health Lambda; Triage Lambda (invokes AgentCore Triage runtime); Hospital Matcher Lambda (invokes AgentCore Hospital Matcher runtime); Route Lambda (calls Gateway maps target); RMP Learning Lambda (invokes AgentCore RMP Quiz runtime, reads/writes Aurora). All use IAM roles; config from Secrets Manager.
+**3. Backend (Lambdas) — exactly five:** Health Lambda; Triage Lambda (invokes AgentCore Triage runtime); Hospital Matcher Lambda (invokes AgentCore Hospital Matcher runtime); **Route Lambda** (calls Gateway maps target); **RMP Learning Lambda** (invokes AgentCore RMP Quiz runtime, reads/writes Aurora). All use IAM roles; config from Secrets Manager.
 
 **4. AI:** Amazon Bedrock AgentCore. Four runtimes: Triage (Eka tools via Gateway), Hospital Matcher (get_hospitals via Gateway), Routing (get_route, get_directions), RMP Quiz (get_question, score_answer). Show as one “Bedrock AgentCore” box with note “Triage, Hospital Matcher, Routing, RMP Quiz runtimes”.
 
-**5. MCP Gateway:** OAuth-secured gateway. Targets: Eka Lambda (Indian medications, protocols), get_hospitals Lambda, maps/routing (gateway_maps Lambda → Google Maps). Policy engine allowlists tools. Show as “MCP Gateway” with arrows to Eka, get_hospitals, gateway_maps.
+**5. Tool gateway:** **MCP Gateway** — OAuth-secured; **Cedar policy** allowlists tools. Three tool Lambdas: **Eka Care Tool**, **get_hospitals Tool**, **gateway_maps Tool** (→ Google Maps). Arrows: AgentCore runtimes → MCP Gateway → Eka / get_hospitals / gateway_maps.
 
-**6. Data:** Aurora PostgreSQL (Serverless v2, IAM auth): triage_assessments, hospital_matches, rmp_scores, learning_answers. Secrets Manager: api_config, gateway-config, rds-config.
+**6. Data layer:** **Aurora PostgreSQL** (Serverless v2, IAM auth): triage_assessments, hospital_matches, rmp_scores, learning_answers. **Secrets Manager**: api_config, gateway-config, rds-config. Show dashed lines from Lambdas and tools to Secrets Manager for config.
 
-**7. External:** Google Maps (directions). Eka Care (via Gateway Lambda).
+**7. External:** Google Maps API (directions). Eka Care Platform (via Eka Care Tool).
 
-**Flow:** Clients → API Gateway → Lambdas; Triage/Hospital Matcher/RMP Quiz Lambdas → AgentCore runtimes → MCP Gateway → Eka / get_hospitals / gateway_maps; Route Lambda → Gateway → gateway_maps → Google Maps; RMP Learning Lambda and Triage Lambda (if persisting) → Aurora. Use short labels (e.g. “API Gateway”, “Triage Lambda”, “AgentCore”, “MCP Gateway”, “Aurora”, “Google Maps”). No code snippets.
+**8. Observability (required):** Dedicated section with **CloudWatch Logs** and **CloudWatch Metrics**. Show dashed arrows from Triage, Hospital Matcher, Route, and RMP Learning Lambdas (and optionally gateway tool Lambdas) to CloudWatch. Label as Observability or Monitoring.
+
+**Flow:** Clients → API Gateway → Cognito Authorizer → Lambdas; Triage/Hospital Matcher/RMP Quiz/Route Lambdas → AgentCore runtimes → MCP Gateway → Eka / get_hospitals / gateway_maps; Route Lambda → Gateway → gateway_maps → Google Maps; RMP Learning Lambda and Triage Lambda → Aurora; Lambdas → Secrets Manager; Lambdas and tools → CloudWatch. Use short labels. No code snippets.
+
+---
+
+### 3.3 Submission-ready diagram checklist
+
+Before finalizing any diagram, verify it includes:
+
+| Category | Items to show |
+|----------|----------------|
+| **Clients** | Mobile App (Android), Web Dashboard; label "RMPs" or "healthcare workers". |
+| **Auth** | API Gateway, **Cognito Authorizer** (or Cognito Auth). |
+| **Lambdas (5)** | Health, Triage, Hospital Matcher, **Route**, **RMP Learning** (not HMP, not Acute). |
+| **AgentCore (4 runtimes)** | Triage, Hospital Matcher, Routing, **RMP Quiz**. |
+| **Gateway** | **MCP Gateway** (optionally label "OAuth + Policy" or "Cedar policy"). |
+| **Tools (3)** | Eka Care Tool, get_hospitals Tool, gateway_maps Tool. |
+| **Data** | Aurora PostgreSQL, **Secrets Manager**. |
+| **External** | Google Maps API, Eka Care Platform. |
+| **Observability** | **CloudWatch Logs**, **CloudWatch Metrics**; dashed lines from Lambdas (and optionally tools) to them. |
+| **Security (implicit)** | Cognito at API; Secrets Manager in data layer; MCP Gateway as policy boundary. |
+
+**Common mistakes to avoid:** "HMP" → use **RMP**; "Acute Service" → use **Route** or **Routing**; missing Observability section; missing Secrets Manager; missing RMP Quiz runtime or RMP Learning Lambda.
 
 ---
 
@@ -204,6 +233,11 @@ flowchart TB
         GAPI[Google Maps API]
     end
 
+    subgraph Observability["Observability"]
+        CWL[CloudWatch Logs]
+        CWM[CloudWatch Metrics]
+    end
+
     Clients --> AG
     AG --> COG
     COG --> HL
@@ -230,6 +264,11 @@ flowchart TB
     RLL --> AUR
     TL -.-> AUR
     Lambdas -.-> SM
+    TL -.-> CWL
+    HML -.-> CWL
+    RL -.-> CWL
+    RLL -.-> CWL
+    Lambdas -.-> CWM
 ```
 
 ---
@@ -242,24 +281,43 @@ flowchart TB
 | **Secrets** | Secrets Manager only; no .env or hardcoded keys in repo. api_config, gateway-config, rds-config, bedrock-config, rmp-test-credentials. |
 | **IAM** | Lambda execution roles (managed identity); Bedrock, Secrets Manager, RDS IAM auth, AgentCore invoke. |
 | **Network** | Aurora in private subnets; Lambda in VPC for RDS when needed; API Gateway public. |
-| **Policy** | AgentCore Policy (Cedar) on MCP Gateway; allowlist of tools (get_hospitals, Eka tools, get_route, get_directions, geocode_address). |
+| **Policy** | AgentCore Policy (Cedar) on MCP Gateway; allowlist of tools (get_hospitals, Eka tools, get_route, get_directions, geocode_address). Script: `scripts/setup_agentcore_policy.py`; ENFORCE or LOG_ONLY. See [POLICY-RUNBOOK.md](backend/POLICY-RUNBOOK.md). |
+| **Guardrails** | G1 input validation (triage/hospitals/route), G2 output validation (max lengths, enums), G3 safety prompts in agent instructions (do not prescribe, refuse off-topic). [AGENT-PROMPTS.md](backend/AGENT-PROMPTS.md). |
+| **Compliance** | HIPAA H1–H4 documented: PHI scope, encryption (Aurora/S3, TLS), access control (IAM scoped, no PHI in logs), audit (request_id, CloudWatch, triage_assessments.id). [HIPAA-Compliance-Checklist.md](backend/HIPAA-Compliance-Checklist.md). |
 
 ---
 
-## 6. References
+## 6. Observability and logging
+
+| Aspect | Implementation |
+|--------|----------------|
+| **Logs** | Each Lambda (Triage, Hospital Matcher, Route, RMP Learning) emits structured logs: `source=` (agentcore/converse), `duration_ms=`, `request_id=` or `aws_request_id=`. No PHI in log message text. |
+| **CloudWatch** | Lambda logs in CloudWatch Logs; use **CloudWatch Logs Insights** to query by source, duration, request_id. Example queries: count by source, p99 duration; trace review for medical audit. |
+| **Trace / audit** | Use `request_id` (or `aws_request_id`) to correlate a request across log lines and with Aurora (`triage_assessments.request_id`). |
+| **Dashboards** | CloudWatch dashboard with widgets for the above queries, or default Lambda metrics (Invocations, Duration, Errors). Bedrock AgentCore console for runtime spans when available. |
+
+**Reference:** [OBSERVABILITY.md](backend/OBSERVABILITY.md).
+
+---
+
+## 7. References
 
 | Document | Description |
 |----------|-------------|
 | [README.md](../README.md) | Project overview, quick start, Big 5 |
 | [HACKATHON.md](../HACKATHON.md) | Submission summary, architecture snippet, quick start |
 | [docs/backend/design.md](backend/design.md) | Full design (roles, components, data models) |
+| [docs/backend/OBSERVABILITY.md](backend/OBSERVABILITY.md) | CloudWatch logs, trace, Logs Insights queries |
+| [docs/backend/POLICY-RUNBOOK.md](backend/POLICY-RUNBOOK.md) | AgentCore Policy (Cedar), allowlist, setup script |
+| [docs/backend/AGENT-PROMPTS.md](backend/AGENT-PROMPTS.md) | G3 safety prompts and guardrails |
+| [docs/backend/HIPAA-Compliance-Checklist.md](backend/HIPAA-Compliance-Checklist.md) | H1–H4 PHI, encryption, access, audit |
 | [docs/architecture/architecture-diagram-prompts.md](architecture/architecture-diagram-prompts.md) | Legacy diagram prompts (design-time) |
 | [docs/openapi.yaml](openapi.yaml) | OpenAPI 3.0 spec for all endpoints |
 
 ---
 
-## 7. How to use this document for submission
+## 8. How to use this document for submission
 
 1. **PPT / report:** Use §1 (Overview) and §2 (As-Built Architecture) for narrative; use §3.1 or §3.2 prompts to generate a diagram, or paste the Mermaid from §4 into a Mermaid-supported tool (e.g. Mermaid Live Editor, GitHub README) and export as image.
-2. **Diagram tools:** Copy-paste the prompt from §3.1 (high-level) or §3.2 (detailed) into your preferred diagram generator.
-3. **Technical appendix:** Include §2 (Components table, Data flow), §4 (Mermaid), and §5 (Security) as the architecture appendix.
+2. **Diagram tools:** Copy-paste the prompt from §3.1 (high-level) or §3.2 (detailed) into your preferred diagram generator. Use §3.3 (checklist) before finalizing to ensure nothing is missing.
+3. **Technical appendix:** Include §2 (Components table, Data flow), §4 (Mermaid), §5 (Security), §6 (Observability), and links to Policy/Guardrails/HIPAA runbooks as the architecture appendix.
