@@ -49,6 +49,20 @@ resource "aws_api_gateway_resource" "rmp_learning" {
   path_part   = "learning"
 }
 
+resource "aws_api_gateway_resource" "rmp_learning_me" {
+  count       = var.rmp_quiz_agent_runtime_arn != "" ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.main.id
+  parent_id   = aws_api_gateway_resource.rmp_learning.id
+  path_part   = "me"
+}
+
+resource "aws_api_gateway_resource" "rmp_learning_leaderboard" {
+  count       = var.rmp_quiz_agent_runtime_arn != "" ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.main.id
+  parent_id   = aws_api_gateway_resource.rmp_learning.id
+  path_part   = "leaderboard"
+}
+
 # RMP auth: Cognito User Pool authorizer for /triage, /hospitals, /route
 resource "aws_api_gateway_authorizer" "rmp" {
   name            = "rmp-cognito"
@@ -154,6 +168,50 @@ resource "aws_api_gateway_integration" "rmp_learning_post" {
   uri                     = aws_lambda_function.rmp_learning[0].invoke_arn
 }
 
+# GET /rmp/learning/me (RMP auth) - current user's total_points and rank
+resource "aws_api_gateway_method" "rmp_learning_me_get" {
+  count = var.rmp_quiz_agent_runtime_arn != "" ? 1 : 0
+
+  rest_api_id   = aws_api_gateway_rest_api.main.id
+  resource_id   = aws_api_gateway_resource.rmp_learning_me[0].id
+  http_method   = "GET"
+  authorization = "COGNITO_USER_POOLS"
+  authorizer_id = aws_api_gateway_authorizer.rmp.id
+}
+
+resource "aws_api_gateway_integration" "rmp_learning_me_get" {
+  count = var.rmp_quiz_agent_runtime_arn != "" ? 1 : 0
+
+  rest_api_id             = aws_api_gateway_rest_api.main.id
+  resource_id             = aws_api_gateway_resource.rmp_learning_me[0].id
+  http_method             = aws_api_gateway_method.rmp_learning_me_get[0].http_method
+  type                    = "AWS_PROXY"
+  integration_http_method = "POST"
+  uri                     = aws_lambda_function.rmp_learning[0].invoke_arn
+}
+
+# GET /rmp/learning/leaderboard (RMP auth) - top N by total_points, ?limit=20
+resource "aws_api_gateway_method" "rmp_learning_leaderboard_get" {
+  count = var.rmp_quiz_agent_runtime_arn != "" ? 1 : 0
+
+  rest_api_id   = aws_api_gateway_rest_api.main.id
+  resource_id   = aws_api_gateway_resource.rmp_learning_leaderboard[0].id
+  http_method   = "GET"
+  authorization = "COGNITO_USER_POOLS"
+  authorizer_id = aws_api_gateway_authorizer.rmp.id
+}
+
+resource "aws_api_gateway_integration" "rmp_learning_leaderboard_get" {
+  count = var.rmp_quiz_agent_runtime_arn != "" ? 1 : 0
+
+  rest_api_id             = aws_api_gateway_rest_api.main.id
+  resource_id             = aws_api_gateway_resource.rmp_learning_leaderboard[0].id
+  http_method             = aws_api_gateway_method.rmp_learning_leaderboard_get[0].http_method
+  type                    = "AWS_PROXY"
+  integration_http_method = "POST"
+  uri                     = aws_lambda_function.rmp_learning[0].invoke_arn
+}
+
 # AWS_PROXY passes response through from Lambda; no method/integration response needed
 
 resource "aws_api_gateway_deployment" "main" {
@@ -178,6 +236,12 @@ resource "aws_api_gateway_deployment" "main" {
       aws_api_gateway_authorizer.rmp.id,
       length(aws_lambda_function.rmp_learning) > 0 ? aws_api_gateway_method.rmp_learning_post[0].id : "",
       length(aws_lambda_function.rmp_learning) > 0 ? aws_api_gateway_integration.rmp_learning_post[0].id : "",
+      length(aws_lambda_function.rmp_learning) > 0 ? aws_api_gateway_resource.rmp_learning_me[0].id : "",
+      length(aws_lambda_function.rmp_learning) > 0 ? aws_api_gateway_method.rmp_learning_me_get[0].id : "",
+      length(aws_lambda_function.rmp_learning) > 0 ? aws_api_gateway_integration.rmp_learning_me_get[0].id : "",
+      length(aws_lambda_function.rmp_learning) > 0 ? aws_api_gateway_resource.rmp_learning_leaderboard[0].id : "",
+      length(aws_lambda_function.rmp_learning) > 0 ? aws_api_gateway_method.rmp_learning_leaderboard_get[0].id : "",
+      length(aws_lambda_function.rmp_learning) > 0 ? aws_api_gateway_integration.rmp_learning_leaderboard_get[0].id : "",
     ]))
   }
 

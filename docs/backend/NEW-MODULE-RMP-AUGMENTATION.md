@@ -108,7 +108,7 @@ Peer-to-peer (e.g. “ask an expert”) can be a later extension once this flow 
 
 ## 5. Checklist (to be updated as we implement)
 
-- [x] **Group C (first slice):** RMP learning — Eka quiz (get_question + score_answer) + POST /rmp/learning deployed and tested. DB + leaderboard + frontend next; then peer-to-peer later.
+- [x] **Group C (backend complete):** RMP learning — Eka quiz (get_question + score_answer) + POST /rmp/learning; Aurora rmp_scores/learning_answers (migration 003); points persisted on score_answer; GET /rmp/learning/me, GET /rmp/learning/leaderboard. Frontend: Learning screen to call these APIs (see [RMP-LEARNING-API.md](../frontend/RMP-LEARNING-API.md)). Peer-to-peer later.
 - [ ] **Group A:** Offline & resilience — sync + cache APIs; frontend cache + offline flow
 - [ ] **Group B:** Multi-language & accessibility — language + audio APIs; frontend i18n + audio
 - [ ] **Group D:** Collective intelligence — outcome aggregation + protocol/insights
@@ -126,4 +126,4 @@ After this module (or incrementally), proceed to **AC-3 re-test** → **Web app 
 
 **Deploy:** First-time deploy: set `agent_id: null` and `agent_arn: null` for `rmp_quiz_agent` in `.bedrock_agentcore.yaml` so the toolkit calls **CreateAgentRuntime** (UpdateAgentRuntime returns AccessDenied when the runtime does not exist). After a successful deploy, the toolkit writes the new runtime ID/ARN back. Then add the runtime ARN to `terraform.tfvars`, run `enable_gateway_on_rmp_quiz_runtime.py`, and `terraform apply`. **Tested:** get_question and score_answer return 200; first request may 504 (cold start), retry once. See [RMP-LEARNING-COMPLETE-RUNBOOK.md](./RMP-LEARNING-COMPLETE-RUNBOOK.md) for full steps.
 
-**Still to do:** Aurora rmp_scores/learning_answers, GET leaderboard, GET me, frontend.
+**Still to do:** Frontend Learning screen (call POST /rmp/learning, GET /rmp/learning/me, GET /rmp/learning/leaderboard). Backend: Aurora tables (003_rmp_learning.sql), persistence on score_answer, GET me and GET leaderboard are implemented. To run migration 003: use [AURORA-MIGRATIONS-RUNBOOK.md](./AURORA-MIGRATIONS-RUNBOOK.md) (tunnel + `scripts/run_rmp_learning_migration.py`).

@@ -1,6 +1,6 @@
 # RMP Learning (Group C) — Complete runbook
 
-**Purpose:** Finish the first slice of RMP Learning: deploy RMP Quiz agent, wire Gateway (Eka), apply Terraform, and test POST /rmp/learning.
+**Purpose:** Deploy and operate RMP Learning: RMP Quiz agent, Gateway (Eka), Terraform (Lambda + Aurora), POST /rmp/learning (get_question, score_answer), GET /rmp/learning/me, GET /rmp/learning/leaderboard. Frontend contract: [RMP-LEARNING-API.md](../frontend/RMP-LEARNING-API.md).
 
 ---
 
@@ -74,9 +74,17 @@ Then attach the policy to that principal in IAM Console. If you just attached it
    ```bash
    cd infrastructure && terraform apply
    ```
-   This builds the RMP Learning Lambda and creates POST /rmp/learning.
+   This builds the RMP Learning Lambda (with VPC and RDS access), creates POST /rmp/learning, GET /rmp/learning/me, GET /rmp/learning/leaderboard.
 
-5. **Test**
+5. **Run Aurora migration 003** (for leaderboard and “my score”)
+
+   With an **SSH tunnel** to Aurora running (see [AURORA-MIGRATIONS-RUNBOOK.md](./AURORA-MIGRATIONS-RUNBOOK.md)):
+   ```bash
+   RDS_HOST_OVERRIDE=127.0.0.1 python3 scripts/run_rmp_learning_migration.py
+   ```
+   Without this, GET /rmp/learning/me and GET /rmp/learning/leaderboard return 500. For full migration steps (tunnel, IAM token, SSL), see [AURORA-MIGRATIONS-RUNBOOK.md](./AURORA-MIGRATIONS-RUNBOOK.md) and [infrastructure/migrations/README.md](../../infrastructure/migrations/README.md).
+
+6. **Test**
    ```bash
    eval $(python3 scripts/load_api_config.py --exports)
    export RMP_TOKEN=$(python3 scripts/get_rmp_token.py)
@@ -89,8 +97,16 @@ Then attach the policy to that principal in IAM Console. If you just attached it
      ```bash
      curl -s -X POST "$API_URL/rmp/learning" -H "Content-Type: application/json" -H "Authorization: Bearer $RMP_TOKEN" -d '{"action":"score_answer","question":"...","reference_answer":"...","user_answer":"Monitor temperature and give paracetamol"}'
      ```
+   - My score:
+     ```bash
+     curl -s "$API_URL/rmp/learning/me" -H "Authorization: Bearer $RMP_TOKEN"
+     ```
+   - Leaderboard:
+     ```bash
+     curl -s "$API_URL/rmp/learning/leaderboard?limit=10" -H "Authorization: Bearer $RMP_TOKEN"
+     ```
 
-Expect **200** and JSON with `question`/`reference_answer` (get_question) or `points`/`feedback` (score_answer).
+Expect **200** and JSON: get_question → `question`/`reference_answer`; score_answer → `points`/`feedback`; me → `total_points`/`rank`; leaderboard → `leaderboard` array.
 
 ---
 
@@ -98,4 +114,7 @@ Expect **200** and JSON with `question`/`reference_answer` (get_question) or `po
 
 - [NEW-MODULE-RMP-AUGMENTATION.md](./NEW-MODULE-RMP-AUGMENTATION.md) §4–6  
 - [API-TEST-RESULTS.md](./API-TEST-RESULTS.md) § RMP Learning test  
-- [IAM-AGENTCORE-DEPLOY-PERMISSIONS.md](./IAM-AGENTCORE-DEPLOY-PERMISSIONS.md)
+- [RMP-LEARNING-API.md](../frontend/RMP-LEARNING-API.md) – Frontend integration contract  
+- [IAM-AGENTCORE-DEPLOY-PERMISSIONS.md](./IAM-AGENTCORE-DEPLOY-PERMISSIONS.md)  
+- [AURORA-MIGRATIONS-RUNBOOK.md](./AURORA-MIGRATIONS-RUNBOOK.md) – Run any Aurora migration (tunnel, script, IAM + SSL)
+- [infrastructure/migrations/README.md](../../infrastructure/migrations/README.md) – Aurora migration 003
