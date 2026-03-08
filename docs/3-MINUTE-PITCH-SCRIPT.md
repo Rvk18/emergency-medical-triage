@@ -1,44 +1,53 @@
-# 3-minute pitch script — Architecture, mobile app & web app
+# 3-minute pitch script — Architecture & USP first, Web & Mobile you manage
 
-**Use this for a live demo or presentation.** Speak at a relaxed pace (~140 words per minute). Total: ~420 words ≈ 3 minutes.
-
----
-
-## [0:00–0:35] Problem and why we built this
-
-In rural India, **68% of healthcare providers are unqualified RMPs** — Rural Medical Practitioners — with no formal training. Yet they serve **70% of the population**. In emergencies they often lack reliable severity assessment, don’t know which hospitals have the right capacity or specialists, and don’t have access to **Indian drug brands and treatment protocols** at the point of care. We’re not replacing RMPs; we’re **augmenting** them with an AI-powered platform so they can make safer triage decisions in the golden hour.
+**Structure:** Important things (Architecture + USP) in the **first ~2 minutes**. Web app and mobile app in the **last ~1 minute** — short bullets for you to expand. Speak at a relaxed pace (~140 words/min). Total ~420 words ≈ 3 min.
 
 ---
 
-## [0:35–1:20] What we built — backend and APIs
+## [0:00–0:35] Problem and USP
 
-We built an end-to-end system. On the **backend**, RMPs hit a single **API Gateway** with **Cognito** sign-in. From there, **Lambda** functions handle triage, hospital matching, routing, and RMP Learning. **AI** runs on **Amazon Bedrock** and **Bedrock AgentCore**: we have four runtimes — Triage, Hospital Matcher, Routing, and RMP Quiz. The Triage runtime is wired to **Eka Care** via an MCP Gateway, so when an RMP asks for “Indian paracetamol brands” or “fever protocol,” recommendations include real Indian brands and protocol-style steps. Hospital matching uses a **get_hospitals** tool; routing uses **Google Maps** for real distance, duration, and turn-by-turn directions. We persist triage and learning scores in **Aurora PostgreSQL**. All of this is deployed with **Terraform** — Lambda, API Gateway, Cognito, Aurora, Secrets Manager, and the Gateway Lambdas for Eka and maps.
-
----
-
-## [1:20–2:05] Web app and mobile app
-
-We have **two frontends** that share the same APIs. The **web app** is a Vite-based dashboard. RMPs sign in with Cognito, then run through triage — symptoms and vitals — and get severity and recommendations, including Eka content when relevant. They then get a list of matched hospitals and can request a route with a Google Maps link. We also have an admin view with a **live map** of patients and hospitals. The web app is hosted on **S3 and CloudFront**; we don’t put API keys in the frontend — the map key is served from our backend via a **GET /config** endpoint. The **Android app** is built with **Kotlin and Jetpack Compose**. It does the same flow: sign in with Cognito, get an Id Token, and call the same APIs — triage, hospitals, route, and RMP Learning — with the **Authorization: Bearer** header. We documented how mobile gets the token and attaches it to every request in our **MOBILE-COGNITO-API-AUTH** doc. Both clients talk to the same API Gateway; the only difference is the UI — web for desktop or admin, mobile for field use.
+In rural India, **68% of healthcare providers are unqualified RMPs** — no formal training — yet they serve **70% of the population**. In emergencies they lack reliable severity assessment, don’t know which hospitals have the right capacity or specialists, and don’t have **Indian drug brands and treatment protocols** at point of care. **Our USP:** we **augment** RMPs, not replace them — AI triage with **Eka Care** (Indian medications and protocols), hospital matching, **real Google Maps routing**, and **RMP Learning** (quiz + leaderboard) so they can make safer decisions in the golden hour.
 
 ---
 
-## [2:05–2:50] End-to-end flow and takeaway
+## [0:35–1:25] Architecture — the important bits
 
-The **demo flow** is: sign in, enter symptoms — for example “fever, patient wants Indian paracetamol brands” — get severity and recommendations with Indian brands and protocols, then get hospital matches and pick one to get driving directions and a Google Maps link. RMP Learning adds a quiz: get a question, submit an answer, earn points, and see a leaderboard. **Security**: only public routes are health and config; everything else requires a Cognito Id Token. We use **Secrets Manager** for API keys and config; no secrets in the frontend. **Cost** for dev or low traffic is roughly **110 to 200 dollars per month** on AWS, driven by NAT, Aurora Serverless, and Bedrock.
+**Single entry:** RMPs hit **API Gateway** with **Cognito** sign-in. **Lambda** functions handle triage, hospital matching, routing, and RMP Learning.
+
+**AI layer:** Everything runs on **Amazon Bedrock** and **Bedrock AgentCore** — we have **four runtimes**: Triage, Hospital Matcher, Routing, and RMP Quiz. The **Triage** runtime is wired to **Eka Care** via an **MCP Gateway**: when an RMP asks for “Indian paracetamol brands” or “fever protocol,” recommendations include real Indian brands and protocol-style steps. **Hospital Matcher** uses a **get_hospitals** tool; **routing** uses **Google Maps** for distance, duration, and turn-by-turn directions. We persist triage and learning scores in **Aurora PostgreSQL**. **Security:** only health and config are public; all other endpoints require a Cognito Id Token. API keys and config live in **Secrets Manager** — nothing in the frontend. **Infra:** Terraform — Lambda, API Gateway, Cognito, Aurora, Gateway Lambdas for Eka and maps.
 
 ---
 
-## [2:50–3:00] Closing
+## [1:25–2:00] Architecture — flow and guardrails
 
-So in three minutes: we’re helping rural RMPs with **AI triage**, **Eka for Indian drugs and protocols**, **hospital matching**, and **real routing** — on both **web and Android**, against one backend. Thank you.
+**Flow:** Triage → AgentCore Triage runtime → Eka tools when needed → severity and recommendations. Hospitals → AgentCore Hospital Matcher → get_hospitals → optional distance/directions per hospital. Route → Gateway maps Lambda → Google Maps → directions URL. RMP Learning → AgentCore RMP Quiz + Aurora for points and leaderboard. We use **session_id** so one patient’s triage, hospitals, and route stay in one session. **Guardrails:** input and output validation, safety prompts (“do not prescribe,” “emergency triage only”), and an AgentCore **policy** on the Gateway so only whitelisted tools can be called.
+
+---
+
+## [2:00–2:35] Web app — you manage
+
+- **Web app:** Vite-based dashboard; Cognito login; triage (symptoms, vitals) → severity and recommendations (including Eka when relevant) → hospital list → route with Google Maps link; admin view with live map.
+- Hosted on **S3 + CloudFront**; map key from backend **GET /config**, no keys in frontend.
+- *[Add your own points: UX, admin features, map, etc.]*
+
+---
+
+## [2:35–3:00] Mobile app — you manage
+
+- **Android app:** Kotlin, Jetpack Compose; same APIs — triage, hospitals, route, RMP Learning — with Cognito Id Token in **Authorization: Bearer** header.
+- Same backend; mobile for field use, web for desktop/admin.
+- *[Add your own points: offline banner, UX, form flow, etc.]*
+
+**Closing (optional):** So in three minutes: we’re helping rural RMPs with **AI triage**, **Eka for Indian drugs and protocols**, **hospital matching**, and **real routing** — on **web and Android**, one backend. Thank you.
 
 ---
 
 ## Quick reference — one-liners
 
-- **Problem:** 68% of rural providers are unqualified RMPs serving 70% of the population; they lack severity assessment, hospital knowledge, and Indian drug/protocol access.
-- **Solution:** Augment RMPs with AI triage (Eka), hospital matching, routing (Google Maps), and RMP Learning; one backend, web + Android.
-- **Backend:** API Gateway + Cognito → Lambdas (triage, hospitals, route, RMP Learning) → Bedrock AgentCore (4 runtimes) → MCP Gateway → Eka, get_hospitals, Google Maps; Aurora for persistence.
-- **Web:** Vite dashboard, S3 + CloudFront, Cognito login, GET /config for map key; triage → hospitals → route + admin map.
-- **Mobile:** Android, Kotlin + Compose, same APIs with Cognito Id Token; triage, hospitals, route, RMP Learning.
-- **Security:** Cognito on all protected routes; config from backend; Secrets Manager, no secrets in frontend.
+| Topic | One-liner |
+|-------|-----------|
+| **Problem** | 68% of rural providers are unqualified RMPs serving 70%; they lack severity assessment, hospital knowledge, Indian drug/protocol access. |
+| **USP** | Augment RMPs (not replace): AI triage + Eka (Indian drugs/protocols) + hospital matching + Google Maps routing + RMP Learning; one backend, web + Android. |
+| **Architecture** | API Gateway + Cognito → Lambdas (triage, hospitals, route, RMP Learning) → Bedrock AgentCore (4 runtimes) → MCP Gateway → Eka, get_hospitals, Google Maps; Aurora; Secrets Manager; no secrets in frontend. |
+| **Web** | Vite dashboard, S3 + CloudFront, GET /config for map key; triage → hospitals → route + admin map. |
+| **Mobile** | Android, Kotlin + Compose, same APIs with Cognito Id Token; you manage the rest. |
